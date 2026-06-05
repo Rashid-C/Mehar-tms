@@ -1,7 +1,9 @@
 'use client'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import { getInvoices, getTailors, getSummary, Invoice, Tailor, Summary } from '@/lib/api'
+import PageHeader from '@/components/ui/PageHeader'
+import StatCard from '@/components/ui/StatCard'
 
 export default function Home() {
   const router = useRouter()
@@ -11,7 +13,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [filterTailor, setFilterTailor] = useState('')
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
       const params = filterTailor ? { tailor: filterTailor } : {}
@@ -28,121 +30,115 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchData()
   }, [filterTailor])
 
+  useEffect(() => { fetchData() }, [fetchData])
+
   return (
-    <main style={{ background: '#08080f', minHeight: '100vh', padding: '32px' }}>
+    <main className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ background: '#08080f' }}>
+      <div className="max-w-7xl mx-auto">
 
-      {/* Page Title */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
-          <div style={{ width: '3px', height: '22px', background: 'linear-gradient(180deg, #D4AF37, #8B6914)', borderRadius: '2px' }} />
-          <h2 style={{ color: '#ffffff', fontSize: '20px', fontWeight: 600, letterSpacing: '0.3px' }}>Dashboard</h2>
-        </div>
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', marginLeft: '15px', letterSpacing: '1px' }}>
-          INVOICE OVERVIEW — ALL RECORDS
-        </p>
-      </div>
+        <PageHeader title="Dashboard" subtitle="INVOICE OVERVIEW — ALL RECORDS" />
 
-      {/* Summary Cards */}
-      {summary && (
-        <div className="grid grid-cols-3 gap-5 mb-10">
-          {/* Card 1 */}
-          <div style={{ background: 'linear-gradient(135deg, #111118, #0d0d18)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '14px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '80px', height: '80px', background: 'radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)', borderRadius: '0 14px 0 80px' }} />
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', letterSpacing: '2px', marginBottom: '12px' }}>TOTAL INVOICES</p>
-            <p style={{ color: '#ffffff', fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>{summary.total_invoices}</p>
-            <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(90deg, rgba(212,175,55,0.3), transparent)' }} />
+        {/* Summary Cards */}
+        {summary && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <StatCard label="TOTAL INVOICES" value={summary.total_invoices} color="white" glow="gold" />
+            <StatCard label="TOTAL PIECES" value={summary.total_pieces} color="blue" />
+            <StatCard label="TOTAL AMOUNT" value={`AED ${summary.total_amount}`} color="gold" glow="gold" />
           </div>
-          {/* Card 2 */}
-          <div style={{ background: 'linear-gradient(135deg, #111118, #0d0d18)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '14px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '80px', height: '80px', background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', borderRadius: '0 14px 0 80px' }} />
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', letterSpacing: '2px', marginBottom: '12px' }}>TOTAL PIECES</p>
-            <p style={{ color: '#60a5fa', fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>{summary.total_pieces}</p>
-            <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(90deg, rgba(59,130,246,0.3), transparent)' }} />
-          </div>
-          {/* Card 3 */}
-          <div style={{ background: 'linear-gradient(135deg, #111118, #0d0d18)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: '14px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '80px', height: '80px', background: 'radial-gradient(circle, rgba(212,175,55,0.12) 0%, transparent 70%)', borderRadius: '0 14px 0 80px' }} />
-            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', letterSpacing: '2px', marginBottom: '12px' }}>TOTAL AMOUNT</p>
-            <p style={{ color: '#D4AF37', fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>AED {summary.total_amount}</p>
-            <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(90deg, rgba(212,175,55,0.4), transparent)' }} />
-          </div>
+        )}
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <select
+            className="field flex-1 min-w-40 max-w-60"
+            value={filterTailor}
+            onChange={e => setFilterTailor(e.target.value)}
+          >
+            <option value="">All Tailors</option>
+            {tailors.map(t => (
+              <option key={t.id} value={t.code}>{t.code} — {t.name}</option>
+            ))}
+          </select>
+          <a href="/add" className="btn-gold">+ New Invoice</a>
         </div>
-      )}
 
-      {/* Filter Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <select
-          value={filterTailor}
-          onChange={e => setFilterTailor(e.target.value)}
-          style={{ background: '#111118', border: '1px solid rgba(212,175,55,0.2)', borderRadius: '8px', padding: '10px 16px', color: 'rgba(255,255,255,0.7)', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
-        >
-          <option value="">All Tailors</option>
-          {tailors.map(t => (
-            <option key={t.id} value={t.code}>{t.code} — {t.name}</option>
-          ))}
-        </select>
+        {/* Table / Cards */}
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 py-20" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            <span className="spinner" />
+            <span className="text-sm tracking-widest">LOADING...</span>
+          </div>
+        ) : invoices.length === 0 ? (
+          <div className="text-center py-20 text-sm tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            NO INVOICES FOUND
+          </div>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(212,175,55,0.12)' }}>
+              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'linear-gradient(135deg,#0f0f1a,#111120)', borderBottom: '1px solid rgba(212,175,55,0.15)' }}>
+                    {['INV NO', 'TAILOR', 'MD NO', 'DATE', 'PC', 'RATE', 'AMOUNT', 'REMARKS'].map(h => (
+                      <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold" style={{ color: 'rgba(212,175,55,0.6)', letterSpacing: '1.5px' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((inv, idx) => (
+                    <tr
+                      key={inv.id}
+                      onClick={() => router.push(`/invoice/${inv.id}`)}
+                      className="cursor-pointer transition-colors"
+                      style={{ background: idx % 2 === 0 ? '#08080f' : '#0a0a12', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,175,55,0.05)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#08080f' : '#0a0a12')}
+                    >
+                      <td className="px-4 py-3.5 font-mono font-semibold" style={{ color: '#D4AF37' }}>{inv.inv_no}</td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', color: '#D4AF37' }}>{inv.tailor_code}</span>
+                      </td>
+                      <td className="px-4 py-3.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{inv.md_no}</td>
+                      <td className="px-4 py-3.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{inv.rcv_date}</td>
+                      <td className="px-4 py-3.5 font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>{inv.pc_count}</td>
+                      <td className="px-4 py-3.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{inv.rate}</td>
+                      <td className="px-4 py-3.5 font-bold" style={{ color: '#4ade80' }}>AED {inv.amount}</td>
+                      <td className="px-4 py-3.5 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{inv.remarks || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        <a
-          href="/add"
-          style={{ background: 'linear-gradient(135deg, #D4AF37, #B8962E)', color: '#0a0a0f', padding: '10px 22px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, letterSpacing: '0.3px', textDecoration: 'none', whiteSpace: 'nowrap' }}
-        >
-          + New Invoice
-        </a>
-      </div>
-
-      {/* Table */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.3)', fontSize: '13px', letterSpacing: '1px' }}>
-          LOADING RECORDS...
-        </div>
-      ) : (
-        <div style={{ border: '1px solid rgba(212,175,55,0.12)', borderRadius: '14px', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-            <thead>
-              <tr style={{ background: 'linear-gradient(135deg, #0f0f1a, #111120)', borderBottom: '1px solid rgba(212,175,55,0.15)' }}>
-                {['INV NO', 'TAILOR', 'MD NO', 'DATE', 'PC', 'RATE', 'AMOUNT', 'REMARKS'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '14px 16px', color: 'rgba(212,175,55,0.6)', fontSize: '10px', letterSpacing: '1.5px', fontWeight: 600 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv, idx) => (
-                <tr
+            {/* Mobile card list */}
+            <div className="md:hidden flex flex-col gap-3">
+              {invoices.map(inv => (
+                <div
                   key={inv.id}
                   onClick={() => router.push(`/invoice/${inv.id}`)}
-                  style={{ background: idx % 2 === 0 ? '#08080f' : '#0a0a12', borderBottom: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(212,175,55,0.05)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#08080f' : '#0a0a12')}
+                  className="card p-4 cursor-pointer active:opacity-80 transition-opacity"
                 >
-                  <td style={{ padding: '13px 16px', color: '#D4AF37', fontFamily: 'monospace', fontWeight: 600 }}>{inv.inv_no}</td>
-                  <td style={{ padding: '13px 16px' }}>
-                    <span style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', color: '#D4AF37', padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px' }}>
-                      {inv.tailor_code}
-                    </span>
-                  </td>
-                  <td style={{ padding: '13px 16px', color: 'rgba(255,255,255,0.6)' }}>{inv.md_no}</td>
-                  <td style={{ padding: '13px 16px', color: 'rgba(255,255,255,0.6)' }}>{inv.rcv_date}</td>
-                  <td style={{ padding: '13px 16px', color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>{inv.pc_count}</td>
-                  <td style={{ padding: '13px 16px', color: 'rgba(255,255,255,0.6)' }}>{inv.rate}</td>
-                  <td style={{ padding: '13px 16px', color: '#4ade80', fontWeight: 700 }}>AED {inv.amount}</td>
-                  <td style={{ padding: '13px 16px', color: 'rgba(255,255,255,0.35)', fontSize: '12px' }}>{inv.remarks || '—'}</td>
-                </tr>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <span className="font-mono font-bold text-base" style={{ color: '#D4AF37' }}>#{inv.inv_no}</span>
+                      <span className="ml-2 text-xs font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', color: '#D4AF37' }}>{inv.tailor_code}</span>
+                    </div>
+                    <span className="font-bold text-sm" style={{ color: '#4ade80' }}>AED {inv.amount}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    <div><span className="block" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, letterSpacing: '1px' }}>MD NO</span>{inv.md_no}</div>
+                    <div><span className="block" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, letterSpacing: '1px' }}>DATE</span>{inv.rcv_date}</div>
+                    <div><span className="block" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, letterSpacing: '1px' }}>PC × RATE</span>{inv.pc_count} × {inv.rate}</div>
+                  </div>
+                  {inv.remarks && <p className="mt-2 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{inv.remarks}</p>}
+                </div>
               ))}
-            </tbody>
-          </table>
-          {invoices.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.2)', fontSize: '13px', letterSpacing: '1px' }}>
-              NO RECORDS FOUND
             </div>
-          )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </main>
   )
 }

@@ -1,122 +1,106 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getTailors, Tailor } from '@/lib/api'
-import { useRouter } from 'next/navigation'
-import axios from 'axios'
+import api, { getTailors, Tailor } from '@/lib/api'
+import PageHeader from '@/components/ui/PageHeader'
+import Alert from '@/components/ui/Alert'
+import FormField from '@/components/ui/FormField'
 
 export default function Tailors() {
-  const router = useRouter()
   const [tailors, setTailors] = useState<Tailor[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [form, setForm] = useState({ name: '', code: '', phone: '' })
 
-  const fetchTailors = async () => {
-    const res = await getTailors()
-    setTailors(res.data)
-  }
+  const fetchTailors = () => getTailors().then(r => setTailors(r.data))
+  useEffect(() => { fetchTailors() }, [])
 
-  useEffect(() => {
-    fetchTailors()
-  }, [])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-  }
 
   const handleSubmit = async () => {
-    setError('')
-    setSuccess('')
-    if (!form.name || !form.code) {
-      setError('Name and Code are required')
-      return
-    }
+    setError(''); setSuccess('')
+    if (!form.name || !form.code) { setError('Name and Code are required'); return }
     setLoading(true)
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/tailors/`, form)
-      setSuccess(`Tailor ${form.code} added successfully`)
+      await api.post('/tailors/', form)
+      setSuccess(`Tailor "${form.code}" added successfully`)
       setForm({ name: '', code: '', phone: '' })
       fetchTailors()
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosErr = err as { response?: { data?: unknown } }
-        setError(JSON.stringify(axiosErr.response?.data))
-      } else {
-        setError('Something went wrong')
-      }
+      const e = err as { response?: { data?: unknown } }
+      setError(e.response?.data ? JSON.stringify(e.response.data) : 'Something went wrong')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white p-6">
-      <div className="max-w-lg mx-auto">
-        <div className="mb-8 flex items-center gap-4">
-          <a href="/" className="text-gray-400 hover:text-white text-sm">← Back</a>
-          <h1 className="text-2xl font-bold">Manage Tailors</h1>
+    <main className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ background: '#08080f' }}>
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <a href="/" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.35)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#D4AF37')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}>
+            ← Back
+          </a>
         </div>
 
-        {/* Add Tailor Form */}
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Add New Tailor</h2>
+        <PageHeader title="Manage Tailors" subtitle="ADD AND VIEW TAILORS" />
 
-          {error && (
-            <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg mb-4 text-sm">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded-lg mb-4 text-sm">
-              {success}
-            </div>
-          )}
+        {/* Add Form */}
+        <div className="card overflow-hidden mb-6">
+          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(212,175,55,0.04)', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
+            <div style={{ width: 8, height: 8, background: '#D4AF37', borderRadius: '50%' }} />
+            <span className="text-xs font-semibold tracking-widest" style={{ color: 'rgba(212,175,55,0.8)', letterSpacing: '2px' }}>ADD NEW TAILOR</span>
+          </div>
+          <div className="p-5 sm:p-7 space-y-5">
+            <Alert type="error" message={error} />
+            <Alert type="success" message={success} />
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-gray-400 text-xs uppercase tracking-wider block mb-2">Full Name *</label>
+            <FormField label="FULL NAME" required>
               <input name="name" value={form.name} onChange={handleChange}
-                placeholder="Muhammad Javed"
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white" />
-            </div>
+                placeholder="Muhammad Javed" className="field" />
+            </FormField>
+
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-gray-400 text-xs uppercase tracking-wider block mb-2">Code *</label>
+              <FormField label="CODE" required>
                 <input name="code" value={form.code} onChange={handleChange}
-                  placeholder="MJ"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white uppercase" />
-              </div>
-              <div>
-                <label className="text-gray-400 text-xs uppercase tracking-wider block mb-2">Phone</label>
+                  placeholder="MJ" className="field uppercase" />
+              </FormField>
+              <FormField label="PHONE">
                 <input name="phone" value={form.phone} onChange={handleChange}
-                  placeholder="+971 50 000 0000"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white" />
-              </div>
+                  placeholder="+971 50 000 0000" className="field" />
+              </FormField>
             </div>
-            <button onClick={handleSubmit} disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 text-white py-3 rounded-lg font-medium">
-              {loading ? 'Adding...' : 'Add Tailor'}
+
+            <button onClick={handleSubmit} disabled={loading} className="btn-gold w-full">
+              {loading ? <><span className="spinner" /> ADDING...</> : '+ ADD TAILOR'}
             </button>
           </div>
         </div>
 
-        {/* Tailors List */}
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-lg font-semibold mb-4">All Tailors</h2>
-          <div className="space-y-3">
-            {tailors.map(t => (
-              <div key={t.id} className="flex items-center justify-between bg-gray-800 rounded-lg px-4 py-3">
+        {/* Tailor list */}
+        <div className="card overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(212,175,55,0.04)', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
+            <div style={{ width: 8, height: 8, background: '#D4AF37', borderRadius: '50%' }} />
+            <span className="text-xs font-semibold tracking-widest" style={{ color: 'rgba(212,175,55,0.8)', letterSpacing: '2px' }}>ALL TAILORS</span>
+            <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }}>{tailors.length}</span>
+          </div>
+          <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+            {tailors.length === 0 ? (
+              <p className="text-center py-10 text-sm tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>NO TAILORS YET</p>
+            ) : tailors.map(t => (
+              <div key={t.id} className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <span className="bg-blue-900 text-blue-300 px-2 py-1 rounded text-xs font-bold">{t.code}</span>
-                  <span className="text-white">{t.name}</span>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded" style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', color: '#D4AF37' }}>
+                    {t.code}
+                  </span>
+                  <span className="text-sm font-medium text-white">{t.name}</span>
                 </div>
-                <span className="text-gray-400 text-sm">{t.phone || 'No phone'}</span>
+                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{t.phone || '—'}</span>
               </div>
             ))}
-            {tailors.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No tailors yet</p>
-            )}
           </div>
         </div>
       </div>
