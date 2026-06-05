@@ -1,0 +1,21 @@
+# Environment variables - NEVER commit this
+backend/.env
+
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/db.sqlite3
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+desktop.ini
