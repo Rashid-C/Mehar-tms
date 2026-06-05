@@ -69,10 +69,10 @@ export default function Home() {
           ))}
         </select>
         <a
-          href="/add"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium"
+         href="/tailors"
+          className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-lg text-sm font-medium"
         >
-          + Add Invoice
+          Manage Tailors
         </a>
       </div>
       {loading ? (
