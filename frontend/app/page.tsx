@@ -1,9 +1,11 @@
 
 'use client'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { getInvoices, getTailors, getSummary, Invoice, Tailor, Summary } from '@/lib/api'
 
 export default function Home() {
+  const router = useRouter()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [tailors, setTailors] = useState<Tailor[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -92,7 +94,7 @@ export default function Home() {
             </thead>
             <tbody>
               {invoices.map(inv => (
-                <tr key={inv.id} className="border-b border-gray-800 hover:bg-gray-900">
+                <tr key={inv.id} onClick={() => router.push(`/invoice/${inv.id}`)} className="border-b border-gray-800 hover:bg-gray-900 cursor-pointer">
                   <td className="py-3 px-3 font-mono text-blue-400">{inv.inv_no}</td>
                   <td className="py-3 px-3">
                     <span className="bg-gray-800 px-2 py-1 rounded text-xs font-bold">{inv.tailor_code}</span>
