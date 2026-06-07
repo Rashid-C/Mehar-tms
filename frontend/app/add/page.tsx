@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getTailors, createInvoice, Tailor } from '@/lib/api'
+import { getTailors, createInvoice, Tailor, lookupRateSheet } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import PageHeader from '@/components/ui/PageHeader'
 import InvoiceForm, { InvoiceFormState } from '@/components/InvoiceForm'
@@ -22,6 +22,27 @@ export default function AddInvoice() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const target = e.target as HTMLInputElement
     setForm(prev => ({ ...prev, [target.name]: target.type === 'checkbox' ? target.checked : target.value }))
+  }
+
+  const handleMdNoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+       setForm(prev => ({ ...prev, md_no: value, tailor: '', rate: '' }))
+
+    if (value.length >= 2) {
+      try {
+        const res = await lookupRateSheet(value)
+        if (res.data) {
+          setForm(prev => ({
+            ...prev,
+            md_no: value,
+            tailor: String(res.data.tailor_id),
+            rate: String(res.data.rate),
+          }))
+        }
+      } catch {
+        // not found — user fills manually
+      }
+    }
   }
 
   const handleSubmit = async () => {
@@ -62,9 +83,11 @@ export default function AddInvoice() {
           </a>
         </div>
         <PageHeader title="New Invoice" subtitle="FILL IN THE DETAILS — AMOUNT IS AUTO-CALCULATED" />
-        <InvoiceForm
+   <InvoiceForm
           form={form} tailors={tailors} loading={loading}
-          error={error} mode="add" onChange={handleChange} onSubmit={handleSubmit}
+          error={error} mode="add" onChange={handleChange}
+          onMdNoChange={handleMdNoChange}
+          onSubmit={handleSubmit}
         />
       </div>
     </main>

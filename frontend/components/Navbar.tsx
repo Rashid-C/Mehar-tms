@@ -5,11 +5,12 @@ import Cookies from 'js-cookie'
 import { useState } from 'react'
 
 const links = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/add', label: 'New Invoice' },
-  { href: '/tailors', label: 'Tailors' },
-  { href: '/report', label: 'Reports' },
-]
+    { href: '/', label: 'Dashboard' },
+    { href: '/add', label: 'New Invoice' },
+    { href: '/tailors', label: 'Tailors' },
+    { href: '/ratesheet', label: 'Rate Sheet' },
+    { href: '/report', label: 'Reports' },
+  ]
 
 export default function Navbar() {
   const pathname = usePathname()

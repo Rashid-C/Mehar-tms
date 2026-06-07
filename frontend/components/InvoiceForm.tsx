@@ -21,12 +21,13 @@ interface InvoiceFormProps {
   error: string
   mode: 'add' | 'edit'
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void
+  onMdNoChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onSubmit: () => void
   onDelete?: () => void
 }
 
 export default function InvoiceForm({
-  form, tailors, loading, error, mode, onChange, onSubmit, onDelete,
+  form, tailors, loading, error, mode, onChange, onMdNoChange, onSubmit, onDelete,
 }: InvoiceFormProps) {
   const autoAmount =
     form.pc_count && form.rate
@@ -64,8 +65,9 @@ export default function InvoiceForm({
               <input name="inv_no" value={form.inv_no} onChange={onChange}
                 type="number" placeholder="1166" className="field" />
             </FormField>
-            <FormField label="MD NO" required>
-              <input name="md_no" value={form.md_no} onChange={onChange}
+           <FormField label="MD NO" required>
+              <input name="md_no" value={form.md_no}
+                onChange={onMdNoChange ?? onChange}
                 type="text" placeholder="787" className="field" />
             </FormField>
           </div>

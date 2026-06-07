@@ -2,14 +2,16 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Sum
-from .models import Tailor, Invoice,RateSheet
-from .serializers import TailorSerializer, InvoiceSerializer,RateSheetSerializer
+from .models import Tailor, Invoice, RateSheet
+from .serializers import TailorSerializer, InvoiceSerializer, RateSheetSerializer
+
 
 class TailorViewSet(viewsets.ModelViewSet):
     queryset = Tailor.objects.all()
     serializer_class = TailorSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['code', 'name']
+
 
 class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.all()
@@ -41,7 +43,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             'total_amount': total_amount,
             'total_invoices': queryset.count(),
         })
-    
+
 
 class RateSheetViewSet(viewsets.ModelViewSet):
     queryset = RateSheet.objects.select_related('tailor').all()
@@ -54,6 +56,8 @@ class RateSheetViewSet(viewsets.ModelViewSet):
         md_no = request.query_params.get('md_no')
         if not md_no:
             return Response({'error': 'md_no is required'}, status=400)
+
+        # Priority 1 — Rate Sheet
         try:
             rate_sheet = RateSheet.objects.select_related('tailor').get(
                 md_no=md_no,
@@ -66,6 +70,25 @@ class RateSheetViewSet(viewsets.ModelViewSet):
                 'tailor_name': rate_sheet.tailor.name,
                 'rate': rate_sheet.rate,
                 'work_type': rate_sheet.work_type,
+                'source': 'rate_sheet',
             })
         except RateSheet.DoesNotExist:
-            return Response({'error': 'MD number not found'}, status=404)
+            pass
+
+        # Priority 2 — Last invoice with this MD number
+        last_invoice = Invoice.objects.select_related('tailor').filter(
+            md_no=md_no
+        ).order_by('-created_at').first()
+
+        if last_invoice:
+            return Response({
+                'md_no': last_invoice.md_no,
+                'tailor_id': last_invoice.tailor.id,
+                'tailor_code': last_invoice.tailor.code,
+                'tailor_name': last_invoice.tailor.name,
+                'rate': last_invoice.rate,
+                'work_type': 'regular',
+                'source': 'invoice_history',
+            })
+
+        return Response({'error': 'MD number not found'}, status=404)

@@ -67,3 +67,30 @@ export const getSummary = (params?: object) => api.get<Summary>('/invoices/summa
 export const getInvoice = (id: number) => api.get<Invoice>(`/invoices/${id}/`)
 export const updateInvoice = (id: number, data: object) => api.put(`/invoices/${id}/`, data)
 export const deleteInvoice = (id: number) => api.delete(`/invoices/${id}/`)
+
+
+
+export interface RateSheet {
+  id: number
+  md_no: string
+  tailor: number
+  tailor_code: string
+  tailor_name: string
+  rate: number
+  work_type: string
+  notes: string
+  is_active: boolean
+}
+
+export const getRateSheets = () => api.get<RateSheet[]>('/ratesheets/')
+export const createRateSheet = (data: object) => api.post('/ratesheets/', data)
+export const updateRateSheet = (id: number, data: object) => api.put(`/ratesheets/${id}/`, data)
+export const deleteRateSheet = (id: number) => api.delete(`/ratesheets/${id}/`)
+export const lookupRateSheet = (md_no: string) => api.get<{
+  md_no: string
+  tailor_id: number
+  tailor_code: string
+  tailor_name: string
+  rate: number
+  work_type: string
+}>(`/ratesheets/lookup/?md_no=${md_no}`)
