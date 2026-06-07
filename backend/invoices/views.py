@@ -2,8 +2,8 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Sum
-from .models import Tailor, Invoice
-from .serializers import TailorSerializer, InvoiceSerializer
+from .models import Tailor, Invoice,RateSheet
+from .serializers import TailorSerializer, InvoiceSerializer,RateSheetSerializer
 
 class TailorViewSet(viewsets.ModelViewSet):
     queryset = Tailor.objects.all()
@@ -41,3 +41,31 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             'total_amount': total_amount,
             'total_invoices': queryset.count(),
         })
+    
+
+class RateSheetViewSet(viewsets.ModelViewSet):
+    queryset = RateSheet.objects.select_related('tailor').all()
+    serializer_class = RateSheetSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['md_no', 'tailor__code']
+
+    @action(detail=False, methods=['get'])
+    def lookup(self, request):
+        md_no = request.query_params.get('md_no')
+        if not md_no:
+            return Response({'error': 'md_no is required'}, status=400)
+        try:
+            rate_sheet = RateSheet.objects.select_related('tailor').get(
+                md_no=md_no,
+                is_active=True
+            )
+            return Response({
+                'md_no': rate_sheet.md_no,
+                'tailor_id': rate_sheet.tailor.id,
+                'tailor_code': rate_sheet.tailor.code,
+                'tailor_name': rate_sheet.tailor.name,
+                'rate': rate_sheet.rate,
+                'work_type': rate_sheet.work_type,
+            })
+        except RateSheet.DoesNotExist:
+            return Response({'error': 'MD number not found'}, status=404)
