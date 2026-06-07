@@ -31,3 +31,19 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ['-inv_no']
+
+
+class RateSheet(models.Model):
+    tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='rate_sheets')
+    md_no = models.CharField(max_length=20, unique=True)
+    rate = models.DecimalField(max_digits=8, decimal_places=2)
+    work_type = models.CharField(max_length=50, blank=True, default='regular')
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.md_no} → {self.tailor.code} @ {self.rate}"
+
+    class Meta:
+        ordering = ['md_no']
