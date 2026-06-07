@@ -124,3 +124,33 @@ export const getStitchingSummary = (params?: object) => api.get<{
   total_amount: number
   total_records: number
 }>('/stitching/summary/', { params })
+
+
+export interface OrderReadymade {
+  id: number
+  md_no: string
+  date: string
+  ord_date: string
+  ord_no: string
+  inv_no: string
+  barcode: string
+  size: string
+  rate: number
+  qty_sm: number
+  qty_a1: number
+  qty_f2: number
+  total_qty: number
+  total_amount: number
+  status: string
+  remarks: string
+}
+
+export const getOrders = (params?: object) => api.get<OrderReadymade[]>('/orders/', { params })
+export const createOrder = (data: object) => api.post('/orders/', data)
+export const updateOrder = (id: number, data: object) => api.put(`/orders/${id}/`, data)
+export const deleteOrder = (id: number) => api.delete(`/orders/${id}/`)
+export const getOrderSummary = (params?: object) => api.get<{
+  total_orders: number
+  total_qty: number
+  total_amount: number
+}>('/orders/summary/', { params })

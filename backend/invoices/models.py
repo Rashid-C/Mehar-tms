@@ -71,3 +71,44 @@ class ShopStitching(models.Model):
     class Meta:
         ordering = ['-date', '-created_at']
 
+class OrderReadymade(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    md_no = models.CharField(max_length=20)
+    date = models.DateField()
+    ord_date = models.DateField(null=True, blank=True)
+    ord_no = models.CharField(max_length=50, blank=True)
+    inv_no = models.CharField(max_length=20, blank=True)
+    barcode = models.CharField(max_length=100, blank=True)
+
+    # Size and rate
+    size = models.CharField(max_length=20, blank=True)  # SM, A1, F2
+    rate = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+
+    # Quantities per size
+    qty_sm = models.PositiveIntegerField(default=0)
+    qty_a1 = models.PositiveIntegerField(default=0)
+    qty_f2 = models.PositiveIntegerField(default=0)
+    total_qty = models.PositiveIntegerField(default=0, editable=False)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    remarks = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        self.total_qty = self.qty_sm + self.qty_a1 + self.qty_f2
+        self.total_amount = self.total_qty * self.rate
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"ORD-{self.ord_no} | {self.md_no} | {self.total_qty} pcs"
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+

@@ -10,6 +10,7 @@ const links = [
     { href: '/tailors', label: 'Tailors' },
     { href: '/ratesheet', label: 'Rate Sheet' },
     { href: '/stitching', label: 'Stitching' },
+    { href: '/orders', label: 'Orders' },
     { href: '/report', label: 'Reports' },
   ]
 

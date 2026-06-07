@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RateSheet, Tailor, Invoice,ShopStitching
+from .models import OrderReadymade, RateSheet, Tailor, Invoice,ShopStitching
 
 class TailorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,3 +33,10 @@ class ShopStitchingSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['total', 'tailor_code', 'tailor_name']
 
+class OrderReadymadeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderReadymade
+        fields = '__all__'
+        read_only_fields = ['total_qty', 'total_amount']
+
+    
