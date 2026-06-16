@@ -42,12 +42,18 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def summary(self, request):
         queryset = self.get_queryset()
-        total_pieces = queryset.aggregate(Sum('pc_count'))['pc_count__sum'] or 0
-        total_amount = queryset.aggregate(Sum('amount'))['amount__sum'] or 0
+        ji_qs = JobInvoice.objects.all()
+
+        total_pieces = (queryset.aggregate(Sum('pc_count'))['pc_count__sum'] or 0) + \
+                       (ji_qs.aggregate(Sum('pc_count'))['pc_count__sum'] or 0)
+        total_amount = (queryset.aggregate(Sum('amount'))['amount__sum'] or 0) + \
+                       (ji_qs.aggregate(Sum('amount'))['amount__sum'] or 0)
+        total_invoices = queryset.count() + ji_qs.count()
+
         return Response({
             'total_pieces': total_pieces,
             'total_amount': total_amount,
-            'total_invoices': queryset.count(),
+            'total_invoices': total_invoices,
         })
 
 
@@ -281,6 +287,18 @@ class TailorOrderViewSet(viewsets.ModelViewSet):
         if date:
             queryset = queryset.filter(date=date)
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def next_inv_no(self, request):
+        existing = TailorOrder.objects.filter(
+            inv_no__startswith='OD'
+        ).values_list('inv_no', flat=True)
+        max_num = 0
+        for inv in existing:
+            m = re.match(r'^OD(\d+)$', inv)
+            if m:
+                max_num = max(max_num, int(m.group(1)))
+        return Response({'next_inv_no': f"OD{max_num + 1:03d}"})
 
     @action(detail=False, methods=['get'])
     def summary(self, request):

@@ -159,6 +159,7 @@ export const getOrderSummary = (params?: object) => api.get<{
 
 export interface TailorOrder {
   id: number
+  inv_no: string
   tailor: number
   tailor_code: string
   tailor_name: string
@@ -172,6 +173,7 @@ export const getTailorOrders = (params?: object) => api.get<TailorOrder[]>('/tai
 export const createTailorOrder = (data: object) => api.post('/tailor-orders/', data)
 export const updateTailorOrder = (id: number, data: object) => api.put(`/tailor-orders/${id}/`, data)
 export const deleteTailorOrder = (id: number) => api.delete(`/tailor-orders/${id}/`)
+export const getNextOrderInvNo = () => api.get<{ next_inv_no: string }>('/tailor-orders/next_inv_no/')
 
 
 export interface Payment {

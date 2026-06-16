@@ -101,6 +101,7 @@ class JobInvoice(models.Model):
 
 
 class TailorOrder(models.Model):
+    inv_no = models.CharField(max_length=20, blank=True)
     job_invoice = models.ForeignKey(
         JobInvoice, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='orders'
