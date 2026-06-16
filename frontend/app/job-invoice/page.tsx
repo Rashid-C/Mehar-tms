@@ -5,6 +5,7 @@ import {
   getJobInvoices, createJobInvoice, updateJobInvoice, deleteJobInvoice, JobInvoice, getNextInvNo,
   getTailorOrders, createTailorOrder, updateTailorOrder, deleteTailorOrder, TailorOrder, getNextOrderInvNo,
   getPayments, createPayment, updatePayment, deletePayment, Payment,
+  getTailorJobSummary, TailorJobSummary,
 } from '@/lib/api'
 import PageHeader from '@/components/ui/PageHeader'
 
@@ -65,9 +66,9 @@ export default function JobInvoicePage() {
   const [isEditingPay, setIsEditingPay] = useState(false)
   const [editPayId, setEditPayId] = useState<number | null>(null)
   const [payTailor, setPayTailor] = useState<number | ''>('')
-  const [payDate, setPayDate] = useState(today())
   const [payAmount, setPayAmount] = useState('')
   const [payRemarks, setPayRemarks] = useState('')
+  const [tailorSummary, setTailorSummary] = useState<TailorJobSummary[]>([])
 
   // ── Loaders ───────────────────────────────────────────────────────────
   const loadShop = useCallback(async (p = shopPage, q = shopSearch) => {
@@ -91,11 +92,17 @@ export default function JobInvoicePage() {
     finally { setLoadingPays(false) }
   }, [])
 
+  const loadSummary = useCallback(async () => {
+    const res = await getTailorJobSummary()
+    setTailorSummary(res.data)
+  }, [])
+
   useEffect(() => {
     getTailors().then(r => setTailors(r.data))
     getNextInvNo().then(r => setShopInvNo(r.data.next_inv_no))
     getNextOrderInvNo().then(r => setOrderInvNo(r.data.next_inv_no))
-  }, [])
+    loadSummary()
+  }, [loadSummary])
 
   useEffect(() => { loadShop() }, [loadShop])
   useEffect(() => { loadOrders() }, [loadOrders])
@@ -225,12 +232,12 @@ export default function JobInvoicePage() {
 
   // ── PAYMENT handlers ──────────────────────────────────────────────────
   const resetPayForm = () => {
-    setPayTailor(''); setPayDate(today()); setPayAmount(''); setPayRemarks('')
+    setPayTailor(''); setPayAmount(''); setPayRemarks('')
     setIsEditingPay(false); setEditPayId(null); setShowPayForm(false)
   }
 
   const openEditPay = (p: Payment) => {
-    setPayTailor(p.tailor); setPayDate(p.date); setPayAmount(String(p.amount)); setPayRemarks(p.remarks || '')
+    setPayTailor(p.tailor); setPayAmount(String(p.amount)); setPayRemarks(p.remarks || '')
     setIsEditingPay(true); setEditPayId(p.id); setShowPayForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -240,16 +247,16 @@ export default function JobInvoicePage() {
     if (!payTailor) { fail('Please select a tailor'); return }
     setSaving(true)
     try {
-      const payload = { tailor: payTailor, date: payDate, amount: parseFloat(payAmount), remarks: payRemarks }
+      const payload = { tailor: payTailor, date: today(), amount: parseFloat(payAmount), remarks: payRemarks }
       if (isEditingPay && editPayId) { await updatePayment(editPayId, payload); notify('Payment updated') }
       else { await createPayment(payload); notify('Payment saved') }
-      resetPayForm(); await loadPays()
+      resetPayForm(); await Promise.all([loadPays(), loadSummary()])
     } catch { fail('Failed to save payment') } finally { setSaving(false) }
   }
 
   const handleDeletePay = async (id: number) => {
     if (!confirm('Delete this payment?')) return
-    try { await deletePayment(id); await loadPays() } catch { fail('Failed to delete') }
+    try { await deletePayment(id); await Promise.all([loadPays(), loadSummary()]) } catch { fail('Failed to delete') }
   }
 
   // ── Derived ───────────────────────────────────────────────────────────
@@ -665,39 +672,104 @@ export default function JobInvoicePage() {
           <>
             <div className="card mb-5" style={showPayForm ? {} : { borderColor: 'rgba(74,222,128,0.2)' }}>
               {sectionHeader({
-                label: 'PAYMENT ENTRY', editLabel: 'EDIT PAYMENT',
+                label: 'RELEASE PAYMENT', editLabel: 'EDIT PAYMENT',
                 showForm: showPayForm, isEditing: isEditingPay,
                 onOpen: () => { setIsEditingPay(false); setEditPayId(null); setShowPayForm(true) },
                 onClose: resetPayForm, accentColor: '#4ade80',
               })}
               {showPayForm && (
                 <form onSubmit={handlePaySubmit} className="flex flex-col gap-4 p-5">
-                  {tailorSelector({ ctx: 'payment', value: payTailor, onChange: setPayTailor, accentRgb: '74,222,128' })}
+
+                  {/* Date — read only */}
                   <div>
                     <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>DATE</label>
-                    <input type="date" className="field" value={payDate} onChange={e => setPayDate(e.target.value)} />
+                    <input className="field" value={today()} readOnly
+                      style={{ color: 'rgba(255,255,255,0.4)', cursor: 'default', background: 'rgba(255,255,255,0.02)' }} />
                   </div>
+
+                  {/* Tailor — only worked tailors, no create */}
                   <div>
-                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>AMOUNT (AED)</label>
+                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>TAILOR</label>
+                    {tailorSummary.length === 0 ? (
+                      <p className="text-xs py-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        No tailors have worked yet — add Shop or Order entries first.
+                      </p>
+                    ) : (
+                      <select className="field" value={payTailor}
+                        onChange={e => { setPayTailor(Number(e.target.value)); setPayAmount('') }} required>
+                        <option value="">— Select tailor —</option>
+                        {tailorSummary.map(s => (
+                          <option key={s.tailor_id} value={s.tailor_id}>
+                            {s.tailor_code} — {s.tailor_name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Tailor earnings summary (appears when tailor selected) */}
+                  {payTailor !== '' && (() => {
+                    const s = tailorSummary.find(x => x.tailor_id === Number(payTailor))
+                    if (!s) return null
+                    return (
+                      <div className="rounded-xl px-4 py-3 flex flex-col gap-1.5"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <div className="flex justify-between text-xs">
+                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Shop</span>
+                          <span style={{ color: '#D4AF37' }}>AED {s.shop_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Order</span>
+                          <span style={{ color: '#60a5fa' }}>AED {s.order_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px', marginTop: '2px' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Total Earned</span>
+                          <span className="font-bold" style={{ color: '#fff' }}>AED {s.total_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Already Paid</span>
+                          <span style={{ color: '#f87171' }}>− AED {s.paid_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: '1px solid rgba(74,222,128,0.2)' }}>
+                          <span style={{ color: 'rgba(74,222,128,0.8)' }}>Pending Balance</span>
+                          <span style={{ color: s.balance > 0 ? '#4ade80' : '#f87171' }}>AED {s.balance.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Amount to release */}
+                  <div>
+                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>RELEASE AMOUNT (AED)</label>
                     <input type="number" min="0" step="0.01" className="field" value={payAmount}
                       onChange={e => setPayAmount(e.target.value)} placeholder="0.00" required />
+                    {/* Balance after this payment */}
+                    {payTailor !== '' && payAmount && !isNaN(+payAmount) && +payAmount > 0 && (() => {
+                      const s = tailorSummary.find(x => x.tailor_id === Number(payTailor))
+                      if (!s) return null
+                      const remaining = s.balance - parseFloat(payAmount)
+                      return (
+                        <p className="text-[11px] mt-1.5 font-semibold"
+                          style={{ color: remaining >= 0 ? 'rgba(74,222,128,0.7)' : '#f87171' }}>
+                          {remaining >= 0
+                            ? `Balance after payment: AED ${remaining.toFixed(2)}`
+                            : `Overpayment by AED ${Math.abs(remaining).toFixed(2)}`}
+                        </p>
+                      )
+                    })()}
                   </div>
-                  {payAmount && !isNaN(+payAmount) && +payAmount > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 rounded-xl"
-                      style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.18)' }}>
-                      <span className="text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>PAYMENT AMOUNT</span>
-                      <span className="font-bold text-xl" style={{ color: '#4ade80' }}>AED {parseFloat(payAmount).toFixed(2)}</span>
-                    </div>
-                  )}
+
+                  {/* Remarks */}
                   <div>
-                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>REMARKS</label>
-                    <input className="field" value={payRemarks} onChange={e => setPayRemarks(e.target.value)} placeholder="Optional" />
+                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>REMARKS <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}>(optional)</span></label>
+                    <input className="field" value={payRemarks} onChange={e => setPayRemarks(e.target.value)} placeholder="e.g. advance, full payment…" />
                   </div>
+
                   <div className="flex gap-3">
                     <button type="submit" disabled={saving}
                       className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
                       style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff' }}>
-                      {saving ? 'Saving…' : isEditingPay ? 'Update Payment' : 'Save Payment'}
+                      {saving ? 'Saving…' : isEditingPay ? 'Update Payment' : 'Release Payment'}
                     </button>
                     {isEditingPay && <button type="button" onClick={resetPayForm} className="btn-ghost px-5">Cancel</button>}
                   </div>

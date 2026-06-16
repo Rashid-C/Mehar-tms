@@ -227,6 +227,8 @@ export interface TailorJobSummary {
   shop_amount: number
   order_amount: number
   total_amount: number
+  paid_amount: number
+  balance: number
 }
 
 export const getTailorJobSummary = (params?: object) =>

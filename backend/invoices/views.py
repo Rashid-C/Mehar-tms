@@ -228,41 +228,38 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
     def tailor_summary(self, request):
         month = request.query_params.get('month')
 
-        job_qs = JobInvoice.objects.select_related('tailor').all()
-        order_qs = TailorOrder.objects.select_related('tailor').all()
+        job_qs    = JobInvoice.objects.select_related('tailor').all()
+        order_qs  = TailorOrder.objects.select_related('tailor').all()
+        pay_qs    = Payment.objects.select_related('tailor').all()
 
         if month:
-            job_qs = job_qs.filter(date__month=month)
+            job_qs   = job_qs.filter(date__month=month)
             order_qs = order_qs.filter(date__month=month)
+            pay_qs   = pay_qs.filter(date__month=month)
 
         by_tailor: dict = {}
+
         for j in job_qs:
             tid = j.tailor.id
             if tid not in by_tailor:
-                by_tailor[tid] = {
-                    'tailor_id': tid,
-                    'tailor_code': j.tailor.code,
-                    'tailor_name': j.tailor.name,
-                    'shop_amount': 0.0,
-                    'order_amount': 0.0,
-                }
+                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': j.tailor.code, 'tailor_name': j.tailor.name, 'shop_amount': 0.0, 'order_amount': 0.0, 'paid_amount': 0.0}
             by_tailor[tid]['shop_amount'] += float(j.amount)
 
         for o in order_qs:
             tid = o.tailor.id
             if tid not in by_tailor:
-                by_tailor[tid] = {
-                    'tailor_id': tid,
-                    'tailor_code': o.tailor.code,
-                    'tailor_name': o.tailor.name,
-                    'shop_amount': 0.0,
-                    'order_amount': 0.0,
-                }
+                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': o.tailor.code, 'tailor_name': o.tailor.name, 'shop_amount': 0.0, 'order_amount': 0.0, 'paid_amount': 0.0}
             by_tailor[tid]['order_amount'] += float(o.amount)
+
+        for p in pay_qs:
+            tid = p.tailor.id
+            if tid in by_tailor:
+                by_tailor[tid]['paid_amount'] += float(p.amount)
 
         result = []
         for data in by_tailor.values():
             data['total_amount'] = data['shop_amount'] + data['order_amount']
+            data['balance'] = data['total_amount'] - data['paid_amount']
             result.append(data)
 
         return Response(sorted(result, key=lambda x: x['tailor_code']))
