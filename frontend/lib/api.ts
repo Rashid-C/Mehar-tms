@@ -154,3 +154,50 @@ export const getOrderSummary = (params?: object) => api.get<{
   total_qty: number
   total_amount: number
 }>('/orders/summary/', { params })
+
+
+export interface TailorOrder {
+  id: number
+  tailor: number
+  tailor_code: string
+  tailor_name: string
+  date: string
+  quantity: number
+  amount: number
+  remarks: string
+}
+
+export const getTailorOrders = (params?: object) => api.get<TailorOrder[]>('/tailor-orders/', { params })
+export const createTailorOrder = (data: object) => api.post('/tailor-orders/', data)
+export const updateTailorOrder = (id: number, data: object) => api.put(`/tailor-orders/${id}/`, data)
+export const deleteTailorOrder = (id: number) => api.delete(`/tailor-orders/${id}/`)
+
+
+export interface Payment {
+  id: number
+  tailor: number
+  tailor_code: string
+  tailor_name: string
+  date: string
+  amount: number
+  remarks: string
+}
+
+export const getPayments = (params?: object) => api.get<Payment[]>('/payments/', { params })
+export const createPayment = (data: object) => api.post('/payments/', data)
+export const updatePayment = (id: number, data: object) => api.put(`/payments/${id}/`, data)
+export const deletePayment = (id: number) => api.delete(`/payments/${id}/`)
+
+
+export interface TailorJobSummary {
+  tailor_id: number
+  tailor_code: string
+  tailor_name: string
+  shop_amount: number
+  order_amount: number
+  total_amount: number
+}
+
+export const getNextInvNo = () => api.get<{ next_inv_no: string }>('/stitching/next_inv_no/')
+export const getTailorJobSummary = (params?: object) =>
+  api.get<TailorJobSummary[]>('/stitching/tailor_summary/', { params })

@@ -1,9 +1,13 @@
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Sum
-from .models import Tailor, Invoice, RateSheet, ShopStitching, OrderReadymade
-from .serializers import TailorSerializer, InvoiceSerializer, RateSheetSerializer, ShopStitchingSerializer, OrderReadymadeSerializer
+from django.db.models import Sum, Max
+from .models import Tailor, Invoice, RateSheet, ShopStitching, OrderReadymade, TailorOrder, Payment
+from .serializers import (
+    TailorSerializer, InvoiceSerializer, RateSheetSerializer,
+    ShopStitchingSerializer, OrderReadymadeSerializer,
+    TailorOrderSerializer, PaymentSerializer,
+)
 
 
 class TailorViewSet(viewsets.ModelViewSet):
@@ -126,7 +130,56 @@ class ShopStitchingViewSet(viewsets.ModelViewSet):
             'total_amount': total_amount,
             'total_records': queryset.count(),
         })
-    
+
+    @action(detail=False, methods=['get'])
+    def next_inv_no(self, request):
+        max_id = ShopStitching.objects.aggregate(max_id=Max('id'))['max_id'] or 0
+        return Response({'next_inv_no': f"SH-{max_id + 1:04d}"})
+
+    @action(detail=False, methods=['get'])
+    def tailor_summary(self, request):
+        month = request.query_params.get('month')
+
+        stitch_qs = ShopStitching.objects.select_related('tailor').all()
+        order_qs = TailorOrder.objects.select_related('tailor').all()
+
+        if month:
+            stitch_qs = stitch_qs.filter(date__month=month)
+            order_qs = order_qs.filter(date__month=month)
+
+        by_tailor: dict = {}
+        for s in stitch_qs:
+            tid = s.tailor.id
+            if tid not in by_tailor:
+                by_tailor[tid] = {
+                    'tailor_id': tid,
+                    'tailor_code': s.tailor.code,
+                    'tailor_name': s.tailor.name,
+                    'shop_amount': 0.0,
+                    'order_amount': 0.0,
+                }
+            by_tailor[tid]['shop_amount'] += float(s.total)
+
+        for o in order_qs:
+            tid = o.tailor.id
+            if tid not in by_tailor:
+                by_tailor[tid] = {
+                    'tailor_id': tid,
+                    'tailor_code': o.tailor.code,
+                    'tailor_name': o.tailor.name,
+                    'shop_amount': 0.0,
+                    'order_amount': 0.0,
+                }
+            by_tailor[tid]['order_amount'] += float(o.amount)
+
+        result = []
+        for data in by_tailor.values():
+            data['total_amount'] = data['shop_amount'] + data['order_amount']
+            result.append(data)
+
+        return Response(sorted(result, key=lambda x: x['tailor_code']))
+
+
 class OrderReadymadeViewSet(viewsets.ModelViewSet):
     queryset = OrderReadymade.objects.all()
     serializer_class = OrderReadymadeSerializer
@@ -158,4 +211,65 @@ class OrderReadymadeViewSet(viewsets.ModelViewSet):
             'total_amount': total_amount,
         })
 
+
+class TailorOrderViewSet(viewsets.ModelViewSet):
+    queryset = TailorOrder.objects.select_related('tailor').all()
+    serializer_class = TailorOrderSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['tailor__code', 'tailor__name']
+    ordering_fields = ['date', 'amount']
+
+    def get_queryset(self):
+        queryset = TailorOrder.objects.select_related('tailor').all()
+        tailor = self.request.query_params.get('tailor')
+        month = self.request.query_params.get('month')
+        date = self.request.query_params.get('date')
+        if tailor:
+            queryset = queryset.filter(tailor__code=tailor)
+        if month:
+            queryset = queryset.filter(date__month=month)
+        if date:
+            queryset = queryset.filter(date=date)
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        queryset = self.get_queryset()
+        total_qty = queryset.aggregate(Sum('quantity'))['quantity__sum'] or 0
+        total_amount = queryset.aggregate(Sum('amount'))['amount__sum'] or 0
+        return Response({
+            'total_orders': queryset.count(),
+            'total_qty': total_qty,
+            'total_amount': total_amount,
+        })
+
+
+class PaymentViewSet(viewsets.ModelViewSet):
+    queryset = Payment.objects.select_related('tailor').all()
+    serializer_class = PaymentSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['tailor__code', 'tailor__name']
+    ordering_fields = ['date', 'amount']
+
+    def get_queryset(self):
+        queryset = Payment.objects.select_related('tailor').all()
+        tailor = self.request.query_params.get('tailor')
+        month = self.request.query_params.get('month')
+        date = self.request.query_params.get('date')
+        if tailor:
+            queryset = queryset.filter(tailor__code=tailor)
+        if month:
+            queryset = queryset.filter(date__month=month)
+        if date:
+            queryset = queryset.filter(date=date)
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        queryset = self.get_queryset()
+        total_amount = queryset.aggregate(Sum('amount'))['amount__sum'] or 0
+        return Response({
+            'total_payments': queryset.count(),
+            'total_amount': total_amount,
+        })
 

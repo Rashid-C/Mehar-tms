@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { getInvoices, getSummary, getTailors, Invoice, Tailor } from '@/lib/api'
+import { getInvoices, getSummary, getTailors, getTailorJobSummary, Invoice, Tailor, TailorJobSummary } from '@/lib/api'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import PageHeader from '@/components/ui/PageHeader'
@@ -11,6 +11,7 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 export default function Report() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [tailors, setTailors] = useState<Tailor[]>([])
+  const [jobSummary, setJobSummary] = useState<TailorJobSummary[]>([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedTailor, setSelectedTailor] = useState('')
   const [loading, setLoading] = useState(true)
@@ -22,11 +23,21 @@ export default function Report() {
     try {
       const params: Record<string, string | number> = { month: selectedMonth }
       if (selectedTailor) params.tailor = selectedTailor
-      const [invRes, sumRes, tailorRes] = await Promise.all([getInvoices(params), getSummary(params), getTailors()])
+      const [invRes, sumRes, tailorRes, jobRes] = await Promise.all([
+        getInvoices(params),
+        getSummary(params),
+        getTailors(),
+        getTailorJobSummary({ month: selectedMonth }),
+      ])
       setInvoices(invRes.data)
       setTotalPieces(sumRes.data.total_pieces)
       setTotalAmount(sumRes.data.total_amount)
       setTailors(tailorRes.data)
+      // Filter job summary by selected tailor if one is chosen
+      const js = selectedTailor
+        ? jobRes.data.filter(r => r.tailor_code === selectedTailor)
+        : jobRes.data
+      setJobSummary(js)
     } finally { setLoading(false) }
   }, [selectedMonth, selectedTailor])
 
@@ -131,6 +142,62 @@ export default function Report() {
           <StatCard label="MONTH" value={MONTHS[selectedMonth-1]} color="white" />
           <StatCard label="TOTAL PIECES" value={totalPieces} color="blue" />
           <StatCard label="TOTAL AMOUNT" value={`AED ${totalAmount}`} color="gold" glow="gold" />
+        </div>
+
+        {/* Job Invoice Tailor Summary */}
+        <div className="mb-7">
+          <h3 className="text-xs font-bold tracking-widest mb-4" style={{ color: 'rgba(212,175,55,0.7)', letterSpacing: '2px' }}>
+            JOB INVOICE SUMMARY — SHOP + ORDER PER TAILOR
+          </h3>
+          {jobSummary.length === 0 ? (
+            <div className="text-center py-8 text-xs tracking-widest rounded-xl" style={{ color: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.05)', background: '#0a0a12' }}>
+              NO JOB INVOICE RECORDS FOR THIS MONTH
+            </div>
+          ) : (
+            <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(212,175,55,0.12)' }}>
+              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'linear-gradient(135deg,#0f0f1a,#111120)', borderBottom: '1px solid rgba(212,175,55,0.15)' }}>
+                    {['TAILOR', 'SECTION 1 (SHOP)', 'SECTION 2 (ORDER)', 'COMBINED TOTAL'].map(h => (
+                      <th key={h} className="text-left px-4 py-3.5 text-xs font-semibold" style={{ color: 'rgba(212,175,55,0.6)', letterSpacing: '1.5px' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobSummary.map((row, idx) => (
+                    <tr key={row.tailor_id}
+                      style={{ background: idx % 2 === 0 ? '#08080f' : '#0a0a12', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', color: '#D4AF37' }}>
+                          {row.tailor_code}
+                        </span>
+                        <span className="ml-2 text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>{row.tailor_name}</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-semibold" style={{ color: '#D4AF37' }}>AED {row.shop_amount.toFixed(2)}</td>
+                      <td className="px-4 py-3.5 font-semibold" style={{ color: '#60a5fa' }}>AED {row.order_amount.toFixed(2)}</td>
+                      <td className="px-4 py-3.5 font-bold text-base" style={{ color: '#4ade80' }}>AED {row.total_amount.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                {jobSummary.length > 0 && (
+                  <tfoot>
+                    <tr style={{ background: 'rgba(212,175,55,0.06)', borderTop: '1px solid rgba(212,175,55,0.2)' }}>
+                      <td className="px-4 py-3.5 text-xs font-semibold" style={{ color: 'rgba(212,175,55,0.6)', letterSpacing: '1.5px' }}>TOTAL</td>
+                      <td className="px-4 py-3.5 font-bold" style={{ color: '#D4AF37' }}>
+                        AED {jobSummary.reduce((s, r) => s + r.shop_amount, 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3.5 font-bold" style={{ color: '#60a5fa' }}>
+                        AED {jobSummary.reduce((s, r) => s + r.order_amount, 0).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3.5 font-bold" style={{ color: '#4ade80' }}>
+                        AED {jobSummary.reduce((s, r) => s + r.total_amount, 0).toFixed(2)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Table */}
