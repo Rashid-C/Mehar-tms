@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tailor, Invoice, RateSheet, ShopStitching, OrderReadymade, TailorOrder, Payment
+from .models import Tailor, Invoice, RateSheet, ShopStitching, OrderReadymade, TailorOrder, Payment, JobInvoice
 
 @admin.register(Tailor)
 class TailorAdmin(admin.ModelAdmin):
@@ -31,6 +31,13 @@ class OrderReadymadeAdmin(admin.ModelAdmin):
     search_fields = ['md_no', 'ord_no', 'barcode']
     list_filter = ['status', 'date']
     readonly_fields = ['total_qty', 'total_amount']
+
+@admin.register(JobInvoice)
+class JobInvoiceAdmin(admin.ModelAdmin):
+    list_display = ['inv_no', 'tailor', 'model_no', 'date', 'pc_count', 'rate', 'amount']
+    search_fields = ['inv_no', 'model_no', 'tailor__code']
+    list_filter = ['tailor', 'date']
+    readonly_fields = ['amount']
 
 @admin.register(TailorOrder)
 class TailorOrderAdmin(admin.ModelAdmin):

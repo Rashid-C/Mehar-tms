@@ -1,4 +1,12 @@
+import re
 from django.db import models
+from django.core.exceptions import ValidationError
+
+
+def validate_model_no(value):
+    if not re.fullmatch(r'[a-zA-Z0-9]{1,7}', value):
+        raise ValidationError('Model number must be 1–7 characters: letters and numbers only.')
+
 
 class Tailor(models.Model):
     name = models.CharField(max_length=100)
@@ -71,7 +79,32 @@ class ShopStitching(models.Model):
     class Meta:
         ordering = ['-date', '-created_at']
 
+class JobInvoice(models.Model):
+    inv_no = models.CharField(max_length=20, unique=True)   # MP001, MP002 …
+    model_no = models.CharField(max_length=7, unique=True, validators=[validate_model_no])
+    date = models.DateField()
+    pc_count = models.PositiveIntegerField()
+    rate = models.DecimalField(max_digits=8, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='job_invoices')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        self.amount = self.pc_count * self.rate
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.inv_no} | {self.tailor.code} | {self.model_no} | {self.amount}"
+
+    class Meta:
+        ordering = ['-created_at']
+
+
 class TailorOrder(models.Model):
+    job_invoice = models.ForeignKey(
+        JobInvoice, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='orders'
+    )
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='tailor_orders')
     date = models.DateField()
     quantity = models.PositiveIntegerField(default=0)
@@ -87,6 +120,10 @@ class TailorOrder(models.Model):
 
 
 class Payment(models.Model):
+    job_invoice = models.ForeignKey(
+        JobInvoice, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='payments'
+    )
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='payments')
     date = models.DateField()
     amount = models.DecimalField(max_digits=10, decimal_places=2)

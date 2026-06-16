@@ -61,6 +61,7 @@ export interface Summary {
 export default api
 
 export const getTailors = () => api.get<Tailor[]>('/tailors/')
+export const createTailor = (data: object) => api.post<Tailor>('/tailors/', data)
 export const getInvoices = (params?: object) => api.get<Invoice[]>('/invoices/', { params })
 export const createInvoice = (data: object) => api.post('/invoices/', data)
 export const getSummary = (params?: object) => api.get<Summary>('/invoices/summary/', { params })
@@ -189,6 +190,34 @@ export const updatePayment = (id: number, data: object) => api.put(`/payments/${
 export const deletePayment = (id: number) => api.delete(`/payments/${id}/`)
 
 
+export interface JobInvoice {
+  id: number
+  inv_no: string
+  model_no: string
+  date: string
+  pc_count: number
+  rate: number
+  amount: number
+  tailor: number
+  tailor_code: string
+  tailor_name: string
+  created_at: string
+}
+
+export interface Paginated<T> {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
+export const getJobInvoices = (params?: object) =>
+  api.get<Paginated<JobInvoice>>('/job-invoices/', { params })
+export const createJobInvoice = (data: object) => api.post<JobInvoice>('/job-invoices/', data)
+export const updateJobInvoice = (id: number, data: object) => api.put(`/job-invoices/${id}/`, data)
+export const deleteJobInvoice = (id: number) => api.delete(`/job-invoices/${id}/`)
+export const getNextInvNo = () => api.get<{ next_inv_no: string }>('/job-invoices/next_inv_no/')
+
 export interface TailorJobSummary {
   tailor_id: number
   tailor_code: string
@@ -198,6 +227,5 @@ export interface TailorJobSummary {
   total_amount: number
 }
 
-export const getNextInvNo = () => api.get<{ next_inv_no: string }>('/stitching/next_inv_no/')
 export const getTailorJobSummary = (params?: object) =>
-  api.get<TailorJobSummary[]>('/stitching/tailor_summary/', { params })
+  api.get<TailorJobSummary[]>('/job-invoices/tailor_summary/', { params })

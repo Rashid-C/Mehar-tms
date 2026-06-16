@@ -1,12 +1,14 @@
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Sum, Max
-from .models import Tailor, Invoice, RateSheet, ShopStitching, OrderReadymade, TailorOrder, Payment
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Sum, Max, Q
+import re
+from .models import Tailor, Invoice, RateSheet, ShopStitching, OrderReadymade, TailorOrder, Payment, JobInvoice
 from .serializers import (
     TailorSerializer, InvoiceSerializer, RateSheetSerializer,
     ShopStitchingSerializer, OrderReadymadeSerializer,
-    TailorOrderSerializer, PaymentSerializer,
+    TailorOrderSerializer, PaymentSerializer, JobInvoiceSerializer,
 )
 
 
@@ -131,53 +133,6 @@ class ShopStitchingViewSet(viewsets.ModelViewSet):
             'total_records': queryset.count(),
         })
 
-    @action(detail=False, methods=['get'])
-    def next_inv_no(self, request):
-        max_id = ShopStitching.objects.aggregate(max_id=Max('id'))['max_id'] or 0
-        return Response({'next_inv_no': f"SH-{max_id + 1:04d}"})
-
-    @action(detail=False, methods=['get'])
-    def tailor_summary(self, request):
-        month = request.query_params.get('month')
-
-        stitch_qs = ShopStitching.objects.select_related('tailor').all()
-        order_qs = TailorOrder.objects.select_related('tailor').all()
-
-        if month:
-            stitch_qs = stitch_qs.filter(date__month=month)
-            order_qs = order_qs.filter(date__month=month)
-
-        by_tailor: dict = {}
-        for s in stitch_qs:
-            tid = s.tailor.id
-            if tid not in by_tailor:
-                by_tailor[tid] = {
-                    'tailor_id': tid,
-                    'tailor_code': s.tailor.code,
-                    'tailor_name': s.tailor.name,
-                    'shop_amount': 0.0,
-                    'order_amount': 0.0,
-                }
-            by_tailor[tid]['shop_amount'] += float(s.total)
-
-        for o in order_qs:
-            tid = o.tailor.id
-            if tid not in by_tailor:
-                by_tailor[tid] = {
-                    'tailor_id': tid,
-                    'tailor_code': o.tailor.code,
-                    'tailor_name': o.tailor.name,
-                    'shop_amount': 0.0,
-                    'order_amount': 0.0,
-                }
-            by_tailor[tid]['order_amount'] += float(o.amount)
-
-        result = []
-        for data in by_tailor.values():
-            data['total_amount'] = data['shop_amount'] + data['order_amount']
-            result.append(data)
-
-        return Response(sorted(result, key=lambda x: x['tailor_code']))
 
 
 class OrderReadymadeViewSet(viewsets.ModelViewSet):
@@ -210,6 +165,101 @@ class OrderReadymadeViewSet(viewsets.ModelViewSet):
             'total_qty': total_qty,
             'total_amount': total_amount,
         })
+
+
+class JobInvoicePagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+
+class JobInvoiceViewSet(viewsets.ModelViewSet):
+    queryset = JobInvoice.objects.select_related('tailor').all()
+    serializer_class = JobInvoiceSerializer
+    pagination_class = JobInvoicePagination
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['inv_no', 'date', 'amount']
+
+    def get_queryset(self):
+        queryset = JobInvoice.objects.select_related('tailor').all()
+
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            q = (
+                Q(inv_no__icontains=search) |
+                Q(model_no__icontains=search) |
+                Q(tailor__code__icontains=search) |
+                Q(tailor__name__icontains=search)
+            )
+            if re.match(r'^\d{4}-\d{2}-\d{2}$', search):
+                q |= Q(date=search)
+            elif re.match(r'^\d{4}-\d{2}$', search):
+                y, m = search.split('-')
+                q |= Q(date__year=int(y), date__month=int(m))
+            queryset = queryset.filter(q)
+
+        tailor = self.request.query_params.get('tailor')
+        month = self.request.query_params.get('month')
+        if tailor:
+            queryset = queryset.filter(tailor__code=tailor)
+        if month:
+            queryset = queryset.filter(date__month=month)
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def next_inv_no(self, request):
+        existing = JobInvoice.objects.filter(
+            inv_no__startswith='MP'
+        ).values_list('inv_no', flat=True)
+        max_num = 0
+        for inv in existing:
+            m = re.match(r'^MP(\d+)$', inv)
+            if m:
+                max_num = max(max_num, int(m.group(1)))
+        return Response({'next_inv_no': f"MP{max_num + 1:03d}"})
+
+    @action(detail=False, methods=['get'])
+    def tailor_summary(self, request):
+        month = request.query_params.get('month')
+
+        job_qs = JobInvoice.objects.select_related('tailor').all()
+        order_qs = TailorOrder.objects.select_related('tailor').all()
+
+        if month:
+            job_qs = job_qs.filter(date__month=month)
+            order_qs = order_qs.filter(date__month=month)
+
+        by_tailor: dict = {}
+        for j in job_qs:
+            tid = j.tailor.id
+            if tid not in by_tailor:
+                by_tailor[tid] = {
+                    'tailor_id': tid,
+                    'tailor_code': j.tailor.code,
+                    'tailor_name': j.tailor.name,
+                    'shop_amount': 0.0,
+                    'order_amount': 0.0,
+                }
+            by_tailor[tid]['shop_amount'] += float(j.amount)
+
+        for o in order_qs:
+            tid = o.tailor.id
+            if tid not in by_tailor:
+                by_tailor[tid] = {
+                    'tailor_id': tid,
+                    'tailor_code': o.tailor.code,
+                    'tailor_name': o.tailor.name,
+                    'shop_amount': 0.0,
+                    'order_amount': 0.0,
+                }
+            by_tailor[tid]['order_amount'] += float(o.amount)
+
+        result = []
+        for data in by_tailor.values():
+            data['total_amount'] = data['shop_amount'] + data['order_amount']
+            result.append(data)
+
+        return Response(sorted(result, key=lambda x: x['tailor_code']))
 
 
 class TailorOrderViewSet(viewsets.ModelViewSet):
