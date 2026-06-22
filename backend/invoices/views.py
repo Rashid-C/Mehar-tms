@@ -88,7 +88,24 @@ class RateSheetViewSet(viewsets.ModelViewSet):
         except RateSheet.DoesNotExist:
             pass
 
-        # Priority 2 — Last invoice with this MD number
+        # Priority 2 — Last JobInvoice with this model number
+        last_job_invoice = JobInvoice.objects.select_related('tailor').filter(
+            model_no=md_no
+        ).order_by('-created_at').first()
+
+        if last_job_invoice:
+            return Response({
+                'md_no': last_job_invoice.model_no,
+                'tailor_id': last_job_invoice.tailor.id,
+                'tailor_code': last_job_invoice.tailor.code,
+                'tailor_name': last_job_invoice.tailor.name,
+                'rate': last_job_invoice.rate,
+                'work_type': 'regular',
+                'inv_no': last_job_invoice.inv_no,
+                'source': 'job_invoice_history',
+            })
+
+        # Priority 3 — Last old Invoice with this MD number
         last_invoice = Invoice.objects.select_related('tailor').filter(
             md_no=md_no
         ).order_by('-created_at').first()

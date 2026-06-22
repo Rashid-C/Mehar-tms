@@ -6,6 +6,7 @@ import {
   getTailorOrders, createTailorOrder, updateTailorOrder, deleteTailorOrder, TailorOrder, getNextOrderInvNo,
   getPayments, createPayment, updatePayment, deletePayment, Payment,
   getTailorJobSummary, TailorJobSummary,
+  lookupRateSheet,
 } from '@/lib/api'
 import PageHeader from '@/components/ui/PageHeader'
 
@@ -42,6 +43,8 @@ export default function JobInvoicePage() {
   const [shopInvNo, setShopInvNo] = useState('')
   const [shopModelNo, setShopModelNo] = useState('')
   const [shopModelErr, setShopModelErr] = useState('')
+  const [shopRateAutoFilled, setShopRateAutoFilled] = useState(false)
+  const [shopLookupState, setShopLookupState] = useState<'idle'|'loading'|'found'|'notfound'>('idle')
   const [shopDate, setShopDate] = useState(today())
   const [shopPiece, setShopPiece] = useState('')
   const [shopRate, setShopRate] = useState('')
@@ -163,7 +166,8 @@ export default function JobInvoicePage() {
   // ── SHOP handlers ─────────────────────────────────────────────────────
   const resetShopForm = async () => {
     setShopModelNo(''); setShopPiece(''); setShopRate(''); setShopDate(today())
-    setShopModelErr(''); setShopTailor(''); setIsEditingShop(false); setEditShopId(null); setShowShopForm(false)
+    setShopModelErr(''); setShopTailor(''); setShopRateAutoFilled(false); setShopLookupState('idle')
+    setIsEditingShop(false); setEditShopId(null); setShowShopForm(false)
     const r = await getNextInvNo(); setShopInvNo(r.data.next_inv_no)
   }
 
@@ -179,6 +183,30 @@ export default function JobInvoicePage() {
     if (val.length > 7) return 'Max 7 characters'
     if (!MODEL_NO_RE.test(val)) return 'Letters and numbers only'
     return ''
+  }
+
+  const handleShopModelNo = async (raw: string) => {
+    const v = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7)
+    setShopModelNo(v)
+    setShopModelErr(v ? validateModelNo(v) : '')
+    setShopRateAutoFilled(false)
+    setShopLookupState('idle')
+    if (v.length >= 2) {
+      setShopLookupState('loading')
+      try {
+        const res = await lookupRateSheet(v)
+        if (res.data && res.data.rate) {
+          setShopRate(String(res.data.rate))
+          setShopTailor(res.data.tailor_id)
+          setShopRateAutoFilled(true)
+          setShopLookupState('found')
+        } else {
+          setShopLookupState('notfound')
+        }
+      } catch {
+        setShopLookupState('notfound')
+      }
+    }
   }
 
   const handleShopSubmit = async (e: React.FormEvent) => {
@@ -442,16 +470,19 @@ export default function JobInvoicePage() {
                       MODEL NO <span style={{ color: '#cbd5e1', fontWeight: 400 }}>(A–Z, 0–9 · max 7)</span>
                     </label>
                     <input className="field" value={shopModelNo}
-                      onChange={e => {
-                        const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7)
-                        setShopModelNo(v); setShopModelErr(v ? validateModelNo(v) : '')
-                      }}
+                      onChange={e => handleShopModelNo(e.target.value)}
                       placeholder="e.g. MD101" maxLength={7} required
                       style={shopModelErr ? { borderColor: 'rgba(239,68,68,0.5)' } : {}} />
                     {shopModelErr
                       ? <p className="text-xs mt-1" style={{ color: '#dc2626' }}>{shopModelErr}</p>
-                      : shopModelNo ? <p className="text-xs mt-1" style={{ color: '#16a34a' }}>{shopModelNo.length}/7 — valid</p>
-                      : null}
+                      : shopLookupState === 'loading'
+                        ? <p className="text-xs mt-1 font-semibold" style={{ color: '#a5b4fc' }}>⟳ Looking up rate sheet...</p>
+                        : shopLookupState === 'found'
+                          ? <p className="text-xs mt-1 font-semibold" style={{ color: '#4f46e5' }}>✓ Rate auto-filled from rate sheet</p>
+                          : shopLookupState === 'notfound'
+                            ? <p className="text-xs mt-1" style={{ color: '#f59e0b' }}>⚠ Not found in rate sheet — enter rate manually</p>
+                            : shopModelNo ? <p className="text-xs mt-1" style={{ color: '#16a34a' }}>{shopModelNo.length}/7 — valid</p>
+                            : null}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -460,9 +491,15 @@ export default function JobInvoicePage() {
                         onChange={e => setShopPiece(e.target.value)} placeholder="0" required />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>RATE (AED)</label>
+                      <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>
+                        RATE (AED)
+                        {shopRateAutoFilled && (
+                          <span className="ml-2 normal-case font-normal" style={{ color: '#4f46e5', letterSpacing: 0 }}>auto-filled</span>
+                        )}
+                      </label>
                       <input type="number" min="0" step="0.01" className="field" value={shopRate}
-                        onChange={e => setShopRate(e.target.value)} placeholder="0.00" required />
+                        onChange={e => { setShopRate(e.target.value); setShopRateAutoFilled(false); setShopLookupState('idle') }}
+                        placeholder="0.00" required />
                     </div>
                   </div>
                   {shopPiece && shopRate && !isNaN(+shopPiece) && !isNaN(+shopRate) && (
