@@ -40,7 +40,7 @@ export default function Tailors() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
           <a href="/" className="text-sm font-medium transition-colors" style={{ color: '#9ca3af' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#4f46e5')}
+            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
             onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
             ← Back
           </a>
@@ -50,9 +50,9 @@ export default function Tailors() {
 
         {/* Add Form */}
         <div className="card overflow-hidden mb-6">
-          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(79,70,229,0.04)', borderBottom: '1.5px solid rgba(79,70,229,0.08)' }}>
-            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '50%' }} />
-            <span className="text-xs font-bold tracking-widest" style={{ color: '#4f46e5', letterSpacing: '2px' }}>ADD NEW TAILOR</span>
+          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(37,99,235,0.04)', borderBottom: '1.5px solid rgba(37,99,235,0.08)' }}>
+            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', borderRadius: '50%' }} />
+            <span className="text-xs font-bold tracking-widest" style={{ color: '#2563eb', letterSpacing: '2px' }}>ADD NEW TAILOR</span>
           </div>
           <div className="p-5 sm:p-7 space-y-5">
             <Alert type="error" message={error} />
@@ -82,22 +82,22 @@ export default function Tailors() {
 
         {/* Tailor list */}
         <div className="card overflow-hidden">
-          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(79,70,229,0.04)', borderBottom: '1.5px solid rgba(79,70,229,0.08)' }}>
-            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '50%' }} />
-            <span className="text-xs font-bold tracking-widest" style={{ color: '#4f46e5', letterSpacing: '2px' }}>ALL TAILORS</span>
-            <span className="ml-auto text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(79,70,229,0.1)', color: '#4f46e5', border: '1px solid rgba(79,70,229,0.2)' }}>{tailors.length}</span>
+          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(37,99,235,0.04)', borderBottom: '1.5px solid rgba(37,99,235,0.08)' }}>
+            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', borderRadius: '50%' }} />
+            <span className="text-xs font-bold tracking-widest" style={{ color: '#2563eb', letterSpacing: '2px' }}>ALL TAILORS</span>
+            <span className="ml-auto text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(37,99,235,0.1)', color: '#2563eb', border: '1px solid rgba(37,99,235,0.2)' }}>{tailors.length}</span>
           </div>
-          <div className="divide-y" style={{ borderColor: 'rgba(79,70,229,0.06)' }}>
+          <div className="divide-y" style={{ borderColor: 'rgba(37,99,235,0.06)' }}>
             {tailors.length === 0 ? (
               <p className="text-center py-10 text-sm tracking-widest" style={{ color: '#d1d5db' }}>NO TAILORS YET</p>
             ) : tailors.map(t => (
               <div key={t.id} className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                    style={{ background: 'rgba(79,70,229,0.08)', border: '1.5px solid rgba(79,70,229,0.2)', color: '#4f46e5' }}>
+                    style={{ background: 'rgba(37,99,235,0.08)', border: '1.5px solid rgba(37,99,235,0.2)', color: '#2563eb' }}>
                     {t.code}
                   </span>
-                  <span className="text-sm font-medium" style={{ color: '#1e1b4b' }}>{t.name}</span>
+                  <span className="text-sm font-medium" style={{ color: '#1e293b' }}>{t.name}</span>
                 </div>
                 <span className="text-xs" style={{ color: '#9ca3af' }}>{t.phone || '—'}</span>
               </div>

@@ -87,6 +87,7 @@ class JobInvoice(models.Model):
     rate = models.DecimalField(max_digits=8, decimal_places=2)
     amount = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='job_invoices')
+    remarks = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):

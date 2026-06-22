@@ -61,7 +61,7 @@ export default function RateSheetPage() {
     const inputStyle = {
         width: '100%', background: '#ffffff',
         border: '1.5px solid #e5e7eb', borderRadius: '12px',
-        padding: '11px 16px', color: '#1e1b4b', fontSize: '13px',
+        padding: '11px 16px', color: '#1e293b', fontSize: '13px',
         outline: 'none', boxSizing: 'border-box' as const,
         transition: 'border-color 0.2s, box-shadow 0.2s',
     }
@@ -74,17 +74,17 @@ export default function RateSheetPage() {
 
                 {/* Title */}
                 <div style={{ marginBottom: '32px' }}>
-                    <h2 style={{ color: '#1e1b4b', fontSize: '26px', fontWeight: 700, marginBottom: '4px' }}>Rate Sheet</h2>
-                    <p style={{ color: '#a5b4fc', fontSize: '11px', letterSpacing: '2px', fontWeight: 600 }}>
+                    <h2 style={{ color: '#1e293b', fontSize: '26px', fontWeight: 700, marginBottom: '4px' }}>Rate Sheet</h2>
+                    <p style={{ color: '#93c5fd', fontSize: '11px', letterSpacing: '2px', fontWeight: 600 }}>
                         SET RATE PER MD NUMBER — AUTO-FILLS IN INVOICE
                     </p>
                 </div>
 
                 {/* Add Form */}
-                <div style={{ background: '#ffffff', border: '1.5px solid rgba(79,70,229,0.12)', borderRadius: '20px', overflow: 'hidden', marginBottom: '32px', boxShadow: '0 2px 12px rgba(79,70,229,0.07)' }}>
-                    <div style={{ background: 'rgba(79,70,229,0.04)', borderBottom: '1.5px solid rgba(79,70,229,0.08)', padding: '18px 28px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '8px', height: '8px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '50%' }} />
-                        <span style={{ color: '#4f46e5', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>ADD NEW RATE</span>
+                <div style={{ background: '#ffffff', border: '1.5px solid rgba(37,99,235,0.12)', borderRadius: '20px', overflow: 'hidden', marginBottom: '32px', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
+                    <div style={{ background: 'rgba(37,99,235,0.04)', borderBottom: '1.5px solid rgba(37,99,235,0.08)', padding: '18px 28px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '8px', height: '8px', background: 'linear-gradient(135deg,#2563eb,#7c3aed)', borderRadius: '50%' }} />
+                        <span style={{ color: '#2563eb', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>ADD NEW RATE</span>
                     </div>
                     <div style={{ padding: '28px' }}>
                         {error && <div style={{ background: 'rgba(239,68,68,0.07)', border: '1.5px solid rgba(239,68,68,0.2)', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px', color: '#dc2626', fontSize: '13px' }}>{error}</div>}
@@ -94,13 +94,13 @@ export default function RateSheetPage() {
                             <div>
                                 <label style={labelStyle}>MD NUMBER *</label>
                                 <input name="md_no" value={form.md_no} onChange={handleMdNoChange} placeholder="787" style={inputStyle}
-                                    onFocus={e => { e.target.style.borderColor='#4f46e5'; e.target.style.boxShadow='0 0 0 4px rgba(79,70,229,0.1)' }}
+                                    onFocus={e => { e.target.style.borderColor='#2563eb'; e.target.style.boxShadow='0 0 0 4px rgba(37,99,235,0.1)' }}
                                     onBlur={e => { e.target.style.borderColor='#e5e7eb'; e.target.style.boxShadow='none' }} />
                             </div>
                             <div>
                                 <label style={labelStyle}>TAILOR *</label>
                                 <select name="tailor" value={form.tailor} onChange={handleChange} style={{ ...inputStyle, cursor: 'pointer' }}
-                                    onFocus={e => { e.target.style.borderColor='#4f46e5'; e.target.style.boxShadow='0 0 0 4px rgba(79,70,229,0.1)' }}
+                                    onFocus={e => { e.target.style.borderColor='#2563eb'; e.target.style.boxShadow='0 0 0 4px rgba(37,99,235,0.1)' }}
                                     onBlur={e => { e.target.style.borderColor='#e5e7eb'; e.target.style.boxShadow='none' }}>
                                     <option value="">Select Tailor</option>
                                     {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
@@ -109,7 +109,7 @@ export default function RateSheetPage() {
                             <div>
                                 <label style={labelStyle}>RATE (AED) *</label>
                                 <input name="rate" value={form.rate} onChange={handleChange} type="number" placeholder="70" style={inputStyle}
-                                    onFocus={e => { e.target.style.borderColor='#4f46e5'; e.target.style.boxShadow='0 0 0 4px rgba(79,70,229,0.1)' }}
+                                    onFocus={e => { e.target.style.borderColor='#2563eb'; e.target.style.boxShadow='0 0 0 4px rgba(37,99,235,0.1)' }}
                                     onBlur={e => { e.target.style.borderColor='#e5e7eb'; e.target.style.boxShadow='none' }} />
                             </div>
                         </div>
@@ -124,41 +124,41 @@ export default function RateSheetPage() {
                             <div>
                                 <label style={labelStyle}>NOTES</label>
                                 <input name="notes" value={form.notes} onChange={handleChange} placeholder="Optional notes..." style={inputStyle}
-                                    onFocus={e => { e.target.style.borderColor='#4f46e5'; e.target.style.boxShadow='0 0 0 4px rgba(79,70,229,0.1)' }}
+                                    onFocus={e => { e.target.style.borderColor='#2563eb'; e.target.style.boxShadow='0 0 0 4px rgba(37,99,235,0.1)' }}
                                     onBlur={e => { e.target.style.borderColor='#e5e7eb'; e.target.style.boxShadow='none' }} />
                             </div>
                         </div>
 
                         <button onClick={handleSubmit} disabled={loading}
-                            style={{ background: loading ? 'rgba(79,70,229,0.15)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: loading ? '#9ca3af' : '#ffffff', padding: '12px 32px', borderRadius: '50px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 14px rgba(79,70,229,0.3)' }}>
+                            style={{ background: loading ? 'rgba(37,99,235,0.15)' : 'linear-gradient(135deg,#2563eb,#7c3aed)', color: loading ? '#9ca3af' : '#ffffff', padding: '12px 32px', borderRadius: '50px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 14px rgba(37,99,235,0.3)' }}>
                             {loading ? 'SAVING...' : '+ ADD RATE'}
                         </button>
                     </div>
                 </div>
 
                 {/* Rate Sheet Table */}
-                <div style={{ border: '1.5px solid rgba(79,70,229,0.12)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(79,70,229,0.07)' }}>
-                    <div style={{ background: '#ede9fe', borderBottom: '1px solid #ddd6fe', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#4f46e5', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>ALL RATES</span>
-                        <span style={{ background: 'rgba(79,70,229,0.1)', border: '1.5px solid rgba(79,70,229,0.2)', color: '#4f46e5', padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>{ratesheets.length}</span>
+                <div style={{ border: '1.5px solid rgba(37,99,235,0.12)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
+                    <div style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#2563eb', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>ALL RATES</span>
+                        <span style={{ background: 'rgba(37,99,235,0.1)', border: '1.5px solid rgba(37,99,235,0.2)', color: '#2563eb', padding: '3px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700 }}>{ratesheets.length}</span>
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                         <thead>
-                            <tr style={{ background: '#faf9ff', borderBottom: '1px solid rgba(79,70,229,0.08)' }}>
+                            <tr style={{ background: '#faf9ff', borderBottom: '1px solid rgba(37,99,235,0.08)' }}>
                                 {['MD NO','TAILOR','RATE','WORK TYPE','NOTES','STATUS',''].map(h => (
-                                    <th key={h} style={{ textAlign: 'left', padding: '13px 16px', color: '#4f46e5', fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700 }}>{h}</th>
+                                    <th key={h} style={{ textAlign: 'left', padding: '13px 16px', color: '#2563eb', fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700 }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {ratesheets.map((rs, idx) => (
                                 <tr key={rs.id}
-                                    style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid rgba(79,70,229,0.05)' }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = '#ede9fe')}
+                                    style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid rgba(37,99,235,0.05)' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
                                     onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#ffffff' : '#faf9ff')}>
-                                    <td style={{ padding: '12px 16px', color: '#4f46e5', fontWeight: 700, fontFamily: 'monospace' }}>{rs.md_no}</td>
+                                    <td style={{ padding: '12px 16px', color: '#2563eb', fontWeight: 700, fontFamily: 'monospace' }}>{rs.md_no}</td>
                                     <td style={{ padding: '12px 16px' }}>
-                                        <span style={{ background: 'rgba(79,70,229,0.08)', border: '1.5px solid rgba(79,70,229,0.2)', color: '#4f46e5', padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }}>
+                                        <span style={{ background: 'rgba(37,99,235,0.08)', border: '1.5px solid rgba(37,99,235,0.2)', color: '#2563eb', padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }}>
                                             {rs.tailor_code}
                                         </span>
                                     </td>

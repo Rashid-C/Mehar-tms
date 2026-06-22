@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react'
 import { getSummary, Summary } from '@/lib/api'
 
 const actions = [
-  { href: '/job-invoice', icon: '✦', title: 'Shop Entry',   desc: 'Shop · Order · Payment',      accent: '#4f46e5', rgb: '79,70,229',   gradient: 'linear-gradient(135deg,#4f46e5,#7c3aed)' },
+  { href: '/job-invoice', icon: '✦', title: 'Shop Entry',   desc: 'Shop · Order · Payment',            accent: '#2563eb', rgb: '37,99,235',   gradient: 'linear-gradient(135deg,#2563eb,#1d4ed8)' },
   { href: '/report',      icon: '↓', title: 'Reports',      desc: 'Monthly PDF · per-tailor summary',  accent: '#0891b2', rgb: '8,145,178',   gradient: 'linear-gradient(135deg,#0891b2,#0e7490)' },
   { href: '/tailors',     icon: '人', title: 'Tailors',      desc: 'Manage tailor list',                accent: '#16a34a', rgb: '22,163,74',   gradient: 'linear-gradient(135deg,#16a34a,#15803d)' },
   { href: '/stitching',   icon: '⌀', title: 'Stitching',    desc: 'Shop stitching records',            accent: '#d97706', rgb: '217,119,6',   gradient: 'linear-gradient(135deg,#d97706,#b45309)' },
-  { href: '/ratesheet',   icon: '₌', title: 'Rate Sheet',   desc: 'MD number rate configuration',     accent: '#7c3aed', rgb: '124,58,237',  gradient: 'linear-gradient(135deg,#7c3aed,#6d28d9)' },
+  { href: '/ratesheet',   icon: '₌', title: 'Rate Sheet',   desc: 'MD number rate configuration',     accent: '#0369a1', rgb: '3,105,161',   gradient: 'linear-gradient(135deg,#0369a1,#0284c7)' },
 ]
 
 export default function Home() {
@@ -23,7 +23,7 @@ export default function Home() {
 
         {/* Header */}
         <div className="mb-10">
-          <h2 className="font-bold text-3xl" style={{ color: '#1e1b4b' }}>Dashboard</h2>
+          <h2 className="font-bold text-3xl" style={{ color: '#1e293b' }}>Dashboard</h2>
           <p className="text-xs font-semibold tracking-widest mt-1.5" style={{ color: '#a5b4fc', letterSpacing: '2.5px' }}>
             MEHAR PARDHA — TAILOR MANAGEMENT
           </p>
@@ -36,8 +36,8 @@ export default function Home() {
             {/* ── Total Invoices ── */}
             <div className="relative overflow-hidden rounded-3xl p-7 flex flex-col justify-between"
               style={{
-                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                boxShadow: '0 20px 60px rgba(99,102,241,0.45)',
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                boxShadow: '0 20px 60px rgba(37,99,235,0.45)',
                 minHeight: 190,
               }}>
               {/* dot grid */}
@@ -63,7 +63,7 @@ export default function Home() {
             {/* ── Total Pieces ── */}
             <div className="relative overflow-hidden rounded-3xl p-7 flex flex-col justify-between"
               style={{
-                background: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
+                background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)',
                 boxShadow: '0 20px 60px rgba(14,165,233,0.4)',
                 minHeight: 190,
               }}>
@@ -138,7 +138,7 @@ export default function Home() {
                 {a.icon}
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-sm leading-tight" style={{ color: '#1e1b4b' }}>{a.title}</p>
+                <p className="font-bold text-sm leading-tight" style={{ color: '#1e293b' }}>{a.title}</p>
                 <p className="text-xs mt-0.5 truncate" style={{ color: '#9ca3af' }}>{a.desc}</p>
               </div>
               <span className="ml-auto text-lg shrink-0" style={{ color: `rgba(${a.rgb},0.4)` }}>→</span>

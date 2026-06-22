@@ -170,6 +170,7 @@ export interface JobInvoice {
   tailor: number
   tailor_code: string
   tailor_name: string
+  remarks: string
   created_at: string
 }
 

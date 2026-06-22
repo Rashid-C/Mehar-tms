@@ -40,23 +40,23 @@ export default function Report() {
   const downloadPDF = () => {
     const doc = new jsPDF()
     const W = doc.internal.pageSize.getWidth()
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F')
+    doc.setFillColor(37,99,235); doc.rect(0,0,W,28,'F')
     doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold')
     doc.text('MEHAR PARDHA', W/2, 12, {align:'center'})
     doc.setFontSize(8); doc.setFont('helvetica','normal')
     doc.text('TAILOR MANAGEMENT SYSTEM — DEIRA, DUBAI', W/2, 21, {align:'center'})
-    doc.setTextColor(79,70,229); doc.setFontSize(13); doc.setFont('helvetica','bold')
+    doc.setTextColor(37,99,235); doc.setFontSize(13); doc.setFont('helvetica','bold')
     doc.text(`MONTHLY REPORT — ${MONTHS[selectedMonth-1].toUpperCase()} 2026`, W/2, 38, {align:'center'})
     if (selectedTailor) {
       doc.setTextColor(107,114,128); doc.setFontSize(9); doc.setFont('helvetica','normal')
       doc.text(`Tailor: ${selectedTailor}`, W/2, 46, {align:'center'})
     }
     const boxY=52, boxH=16, boxW=55, gap=8, startX=(W-(boxW*3+gap*2))/2
-    doc.setDrawColor(79,70,229); doc.setLineWidth(0.3)
+    doc.setDrawColor(37,99,235); doc.setLineWidth(0.3)
     const boxes = [
       {label:'TOTAL INVOICES', value:String(invoices.length), color:[30,27,75] as [number,number,number]},
-      {label:'TOTAL PIECES', value:String(totalPieces), color:[79,70,229] as [number,number,number]},
-      {label:'TOTAL AMOUNT', value:`AED ${totalAmount}`, color:[79,70,229] as [number,number,number]},
+      {label:'TOTAL PIECES', value:String(totalPieces), color:[37,99,235] as [number,number,number]},
+      {label:'TOTAL AMOUNT', value:`AED ${totalAmount}`, color:[37,99,235] as [number,number,number]},
     ]
     boxes.forEach((b,i) => {
       const x = startX+i*(boxW+gap)
@@ -71,10 +71,10 @@ export default function Report() {
       head:[['INV NO','TAILOR','MD NO','DATE','PC','RATE','AMOUNT','REMARKS']],
       body: invoices.map(inv=>[inv.inv_no,inv.tailor_code,inv.md_no,inv.rcv_date,inv.pc_count,inv.rate,`AED ${inv.amount}`,inv.remarks||'—']),
       foot:[['TOTAL','','','',totalPieces,'',`AED ${totalAmount}`,'']],
-      headStyles:{fillColor:[79,70,229],textColor:[255,255,255],fontStyle:'bold',fontSize:8},
+      headStyles:{fillColor:[37,99,235],textColor:[255,255,255],fontStyle:'bold',fontSize:8},
       bodyStyles:{fillColor:[255,255,255],textColor:[30,27,75],fontSize:8},
       alternateRowStyles:{fillColor:[245,243,255]},
-      footStyles:{fillColor:[237,233,254],textColor:[79,70,229],fontStyle:'bold',fontSize:9},
+      footStyles:{fillColor:[237,233,254],textColor:[37,99,235],fontStyle:'bold',fontSize:9},
       styles:{lineColor:[221,214,254],lineWidth:0.2},
     })
     const finalY = (doc as jsPDF & {lastAutoTable:{finalY:number}}).lastAutoTable.finalY+10
@@ -86,14 +86,14 @@ export default function Report() {
   const downloadInvoicePDF = (inv: Invoice) => {
     const doc = new jsPDF()
     const W = doc.internal.pageSize.getWidth()
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F')
+    doc.setFillColor(37,99,235); doc.rect(0,0,W,28,'F')
     doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold')
     doc.text('MEHAR PARDHA', W/2, 12, {align:'center'})
     doc.setFontSize(8); doc.setFont('helvetica','normal')
     doc.text('TAILOR MANAGEMENT SYSTEM — DEIRA, DUBAI', W/2, 21, {align:'center'})
-    doc.setTextColor(79,70,229); doc.setFontSize(14); doc.setFont('helvetica','bold')
+    doc.setTextColor(37,99,235); doc.setFontSize(14); doc.setFont('helvetica','bold')
     doc.text(`INVOICE #${inv.inv_no}`, W/2, 40, {align:'center'})
-    doc.setDrawColor(79,70,229); doc.setLineWidth(0.3); doc.line(14,45,W-14,45)
+    doc.setDrawColor(37,99,235); doc.setLineWidth(0.3); doc.line(14,45,W-14,45)
     let y=58
     const details:[string,string][] = [['Tailor Code',inv.tailor_code],['Tailor Name',inv.tailor_name],['MD Number',inv.md_no],['Receive Date',inv.rcv_date],['Pieces',String(inv.pc_count)],['Rate (AED)',String(inv.rate)],['Remarks',inv.remarks||'—']]
     details.forEach(([label,value]) => {
@@ -101,11 +101,11 @@ export default function Report() {
       doc.setTextColor(30,27,75); doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.text(value,90,y)
       y+=10
     })
-    doc.setFillColor(237,233,254); doc.setDrawColor(79,70,229); doc.setLineWidth(0.5)
+    doc.setFillColor(237,233,254); doc.setDrawColor(37,99,235); doc.setLineWidth(0.5)
     doc.roundedRect(14,y+5,W-28,24,3,3,'FD')
     doc.setTextColor(165,180,252); doc.setFontSize(9); doc.setFont('helvetica','normal')
     doc.text('TOTAL AMOUNT', W/2, y+15, {align:'center'})
-    doc.setTextColor(79,70,229); doc.setFontSize(18); doc.setFont('helvetica','bold')
+    doc.setTextColor(37,99,235); doc.setFontSize(18); doc.setFont('helvetica','bold')
     doc.text(`AED ${inv.amount}`, W/2, y+25, {align:'center'})
     doc.setTextColor(165,180,252); doc.setFontSize(7); doc.setFont('helvetica','normal')
     doc.text(`Generated ${new Date().toLocaleDateString('en-AE')} — Mehar Pardha`, W/2, 270, {align:'center'})
@@ -140,33 +140,33 @@ export default function Report() {
 
         {/* Job Invoice Tailor Summary */}
         <div className="mb-7">
-          <h3 className="text-xs font-bold tracking-widest mb-4" style={{ color: '#4f46e5', letterSpacing: '2px' }}>
+          <h3 className="text-xs font-bold tracking-widest mb-4" style={{ color: '#2563eb', letterSpacing: '2px' }}>
             JOB INVOICE SUMMARY — SHOP + ORDER PER TAILOR
           </h3>
           {jobSummary.length === 0 ? (
-            <div className="text-center py-8 text-xs tracking-widest rounded-2xl" style={{ color: '#d1d5db', border: '1.5px solid rgba(79,70,229,0.1)', background: '#faf9ff' }}>
+            <div className="text-center py-8 text-xs tracking-widest rounded-2xl" style={{ color: '#d1d5db', border: '1.5px solid rgba(37,99,235,0.1)', background: '#f8faff' }}>
               NO JOB INVOICE RECORDS FOR THIS MONTH
             </div>
           ) : (
-            <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(79,70,229,0.12)', boxShadow: '0 2px 12px rgba(79,70,229,0.07)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(37,99,235,0.12)', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
               <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: '#ede9fe', borderBottom: '1px solid #ddd6fe' }}>
+                  <tr style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe' }}>
                     {['TAILOR','SECTION 1 (SHOP)','SECTION 2 (ORDER)','COMBINED TOTAL'].map(h => (
-                      <th key={h} className="text-left px-4 py-3.5 text-xs font-bold" style={{ color: '#4f46e5', letterSpacing: '1.5px' }}>{h}</th>
+                      <th key={h} className="text-left px-4 py-3.5 text-xs font-bold" style={{ color: '#2563eb', letterSpacing: '1.5px' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {jobSummary.map((row, idx) => (
-                    <tr key={row.tailor_id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid rgba(79,70,229,0.05)' }}>
+                    <tr key={row.tailor_id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#f8faff', borderBottom: '1px solid rgba(37,99,235,0.05)' }}>
                       <td className="px-4 py-3.5">
-                        <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(79,70,229,0.08)', border: '1.5px solid rgba(79,70,229,0.2)', color: '#4f46e5' }}>
+                        <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(37,99,235,0.08)', border: '1.5px solid rgba(37,99,235,0.2)', color: '#2563eb' }}>
                           {row.tailor_code}
                         </span>
                         <span className="ml-2 text-xs" style={{ color: '#6b7280' }}>{row.tailor_name}</span>
                       </td>
-                      <td className="px-4 py-3.5 font-semibold" style={{ color: '#4f46e5' }}>AED {row.shop_amount.toFixed(2)}</td>
+                      <td className="px-4 py-3.5 font-semibold" style={{ color: '#2563eb' }}>AED {row.shop_amount.toFixed(2)}</td>
                       <td className="px-4 py-3.5 font-semibold" style={{ color: '#0891b2' }}>AED {row.order_amount.toFixed(2)}</td>
                       <td className="px-4 py-3.5 font-bold text-base" style={{ color: '#16a34a' }}>AED {row.total_amount.toFixed(2)}</td>
                     </tr>
@@ -174,9 +174,9 @@ export default function Report() {
                 </tbody>
                 {jobSummary.length > 0 && (
                   <tfoot>
-                    <tr style={{ background: 'rgba(79,70,229,0.05)', borderTop: '1.5px solid rgba(79,70,229,0.12)' }}>
-                      <td className="px-4 py-3.5 text-xs font-bold" style={{ color: '#4f46e5', letterSpacing: '1.5px' }}>TOTAL</td>
-                      <td className="px-4 py-3.5 font-bold" style={{ color: '#4f46e5' }}>
+                    <tr style={{ background: 'rgba(37,99,235,0.05)', borderTop: '1.5px solid rgba(37,99,235,0.12)' }}>
+                      <td className="px-4 py-3.5 text-xs font-bold" style={{ color: '#2563eb', letterSpacing: '1.5px' }}>TOTAL</td>
+                      <td className="px-4 py-3.5 font-bold" style={{ color: '#2563eb' }}>
                         AED {jobSummary.reduce((s,r) => s+r.shop_amount, 0).toFixed(2)}
                       </td>
                       <td className="px-4 py-3.5 font-bold" style={{ color: '#0891b2' }}>
@@ -195,41 +195,41 @@ export default function Report() {
 
         {/* Table */}
         {loading ? (
-          <div className="flex items-center justify-center gap-3 py-20" style={{ color: '#a5b4fc' }}>
+          <div className="flex items-center justify-center gap-3 py-20" style={{ color: '#93c5fd' }}>
             <span className="spinner" /><span className="text-sm tracking-widest">LOADING...</span>
           </div>
         ) : (
           <>
             {/* Desktop table */}
-            <div className="hidden md:block rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(79,70,229,0.12)', boxShadow: '0 2px 12px rgba(79,70,229,0.07)' }}>
+            <div className="hidden md:block rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(37,99,235,0.12)', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
               <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: '#ede9fe', borderBottom: '1px solid #ddd6fe' }}>
+                  <tr style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe' }}>
                     {['INV NO','TAILOR','MD NO','DATE','PC','RATE','AMOUNT','REMARKS',''].map(h => (
-                      <th key={h} className="text-left px-4 py-3.5 text-xs font-bold" style={{ color: '#4f46e5', letterSpacing: '1.5px' }}>{h}</th>
+                      <th key={h} className="text-left px-4 py-3.5 text-xs font-bold" style={{ color: '#2563eb', letterSpacing: '1.5px' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {invoices.map((inv,idx) => (
                     <tr key={inv.id}
-                      style={{ background: idx%2===0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid rgba(79,70,229,0.05)' }}
-                      onMouseEnter={e => (e.currentTarget.style.background='#ede9fe')}
-                      onMouseLeave={e => (e.currentTarget.style.background=idx%2===0?'#ffffff':'#faf9ff')}>
-                      <td className="px-4 py-3.5 font-mono font-semibold" style={{ color:'#4f46e5' }}>{inv.inv_no}</td>
+                      style={{ background: idx%2===0 ? '#ffffff' : '#f8faff', borderBottom: '1px solid rgba(37,99,235,0.05)' }}
+                      onMouseEnter={e => (e.currentTarget.style.background='#eff6ff')}
+                      onMouseLeave={e => (e.currentTarget.style.background=idx%2===0?'#ffffff':'#f8faff')}>
+                      <td className="px-4 py-3.5 font-mono font-semibold" style={{ color:'#2563eb' }}>{inv.inv_no}</td>
                       <td className="px-4 py-3.5">
-                        <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background:'rgba(79,70,229,0.08)',border:'1.5px solid rgba(79,70,229,0.2)',color:'#4f46e5' }}>{inv.tailor_code}</span>
+                        <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb' }}>{inv.tailor_code}</span>
                       </td>
                       <td className="px-4 py-3.5" style={{ color:'#4b5563' }}>{inv.md_no}</td>
                       <td className="px-4 py-3.5" style={{ color:'#4b5563' }}>{inv.rcv_date}</td>
-                      <td className="px-4 py-3.5 font-semibold" style={{ color:'#1e1b4b' }}>{inv.pc_count}</td>
+                      <td className="px-4 py-3.5 font-semibold" style={{ color:'#1e293b' }}>{inv.pc_count}</td>
                       <td className="px-4 py-3.5" style={{ color:'#4b5563' }}>{inv.rate}</td>
                       <td className="px-4 py-3.5 font-bold" style={{ color:'#16a34a' }}>AED {inv.amount}</td>
                       <td className="px-4 py-3.5 text-xs" style={{ color:'#9ca3af' }}>{inv.remarks||'—'}</td>
                       <td className="px-4 py-3.5">
                         <button onClick={e => { e.stopPropagation(); downloadInvoicePDF(inv) }}
                           className="text-xs font-bold px-3 py-1 rounded-lg transition-all"
-                          style={{ background:'rgba(79,70,229,0.08)',border:'1.5px solid rgba(79,70,229,0.2)',color:'#4f46e5',cursor:'pointer' }}>
+                          style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb',cursor:'pointer' }}>
                           PDF
                         </button>
                       </td>
@@ -238,9 +238,9 @@ export default function Report() {
                 </tbody>
                 {invoices.length > 0 && (
                   <tfoot>
-                    <tr style={{ background:'rgba(79,70,229,0.05)',borderTop:'1.5px solid rgba(79,70,229,0.12)' }}>
-                      <td colSpan={4} className="px-4 py-3.5 text-xs font-bold" style={{ color:'#4f46e5',letterSpacing:'1.5px' }}>TOTAL</td>
-                      <td className="px-4 py-3.5 font-bold" style={{ color:'#4f46e5' }}>{totalPieces}</td>
+                    <tr style={{ background:'rgba(37,99,235,0.05)',borderTop:'1.5px solid rgba(37,99,235,0.12)' }}>
+                      <td colSpan={4} className="px-4 py-3.5 text-xs font-bold" style={{ color:'#2563eb',letterSpacing:'1.5px' }}>TOTAL</td>
+                      <td className="px-4 py-3.5 font-bold" style={{ color:'#2563eb' }}>{totalPieces}</td>
                       <td className="px-4 py-3.5" />
                       <td className="px-4 py-3.5 font-bold" style={{ color:'#16a34a' }}>AED {totalAmount}</td>
                       <td colSpan={2} className="px-4 py-3.5" />
@@ -263,30 +263,30 @@ export default function Report() {
                 <div key={inv.id} className="card p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold" style={{ color:'#4f46e5' }}>#{inv.inv_no}</span>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background:'rgba(79,70,229,0.08)',border:'1.5px solid rgba(79,70,229,0.2)',color:'#4f46e5' }}>{inv.tailor_code}</span>
+                      <span className="font-mono font-bold" style={{ color:'#2563eb' }}>#{inv.inv_no}</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb' }}>{inv.tailor_code}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm" style={{ color:'#16a34a' }}>AED {inv.amount}</span>
                       <button onClick={() => downloadInvoicePDF(inv)}
                         className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                        style={{ background:'rgba(79,70,229,0.08)',border:'1.5px solid rgba(79,70,229,0.2)',color:'#4f46e5',cursor:'pointer' }}>
+                        style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb',cursor:'pointer' }}>
                         PDF
                       </button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-xs" style={{ color:'#6b7280' }}>
-                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#a5b4fc' }}>MD NO</span>{inv.md_no}</div>
-                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#a5b4fc' }}>DATE</span>{inv.rcv_date}</div>
-                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#a5b4fc' }}>PC × RATE</span>{inv.pc_count} × {inv.rate}</div>
+                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#93c5fd' }}>MD NO</span>{inv.md_no}</div>
+                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#93c5fd' }}>DATE</span>{inv.rcv_date}</div>
+                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#93c5fd' }}>PC × RATE</span>{inv.pc_count} × {inv.rate}</div>
                   </div>
                 </div>
               ))}
               {invoices.length > 0 && (
-                <div className="card p-4 flex items-center justify-between" style={{ borderColor:'rgba(79,70,229,0.3)' }}>
-                  <span className="text-xs font-bold tracking-widest" style={{ color:'#4f46e5' }}>TOTAL</span>
+                <div className="card p-4 flex items-center justify-between" style={{ borderColor:'rgba(37,99,235,0.3)' }}>
+                  <span className="text-xs font-bold tracking-widest" style={{ color:'#2563eb' }}>TOTAL</span>
                   <div className="flex gap-4 text-sm font-bold">
-                    <span style={{ color:'#4f46e5' }}>{totalPieces} pc</span>
+                    <span style={{ color:'#2563eb' }}>{totalPieces} pc</span>
                     <span style={{ color:'#16a34a' }}>AED {totalAmount}</span>
                   </div>
                 </div>

@@ -93,7 +93,7 @@ export default function StitchingPage() {
   const inputStyle = {
     width: '100%', background: '#ffffff',
     border: '1.5px solid #e5e7eb', borderRadius: '12px',
-    padding: '10px 14px', color: '#1e1b4b', fontSize: '13px',
+    padding: '10px 14px', color: '#1e293b', fontSize: '13px',
     outline: 'none', boxSizing: 'border-box' as const,
     transition: 'border-color 0.2s, box-shadow 0.2s',
   }
@@ -109,8 +109,8 @@ export default function StitchingPage() {
 
         {/* Title */}
         <div style={{ marginBottom: '28px' }}>
-          <h2 style={{ color: '#1e1b4b', fontSize: '26px', fontWeight: 700, marginBottom: '4px' }}>Shop Stitching</h2>
-          <p style={{ color: '#a5b4fc', fontSize: '11px', letterSpacing: '2px', fontWeight: 600 }}>
+          <h2 style={{ color: '#1e293b', fontSize: '26px', fontWeight: 700, marginBottom: '4px' }}>Shop Stitching</h2>
+          <p style={{ color: '#93c5fd', fontSize: '11px', letterSpacing: '2px', fontWeight: 600 }}>
             DAILY STITCHING WORK LOG — MD NUMBER AUTO-FILLS TAILOR AND RATE
           </p>
         </div>
@@ -118,22 +118,22 @@ export default function StitchingPage() {
         {/* Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '28px' }}>
           {[
-            { label: 'TOTAL RECORDS', value: summary.total_records, color: '#1e1b4b' },
-            { label: 'TOTAL PIECES',  value: summary.total_pieces,  color: '#4f46e5' },
-            { label: 'TOTAL AMOUNT',  value: `AED ${summary.total_amount}`, color: '#4f46e5' },
+            { label: 'TOTAL RECORDS', value: summary.total_records, color: '#1e293b' },
+            { label: 'TOTAL PIECES',  value: summary.total_pieces,  color: '#2563eb' },
+            { label: 'TOTAL AMOUNT',  value: `AED ${summary.total_amount}`, color: '#2563eb' },
           ].map(c => (
-            <div key={c.label} style={{ background: '#ffffff', border: '1.5px solid rgba(79,70,229,0.1)', borderRadius: '20px', padding: '22px', boxShadow: '0 2px 12px rgba(79,70,229,0.07)' }}>
-              <p style={{ color: '#a5b4fc', fontSize: '10px', letterSpacing: '2px', marginBottom: '10px', fontWeight: 700 }}>{c.label}</p>
+            <div key={c.label} style={{ background: '#ffffff', border: '1.5px solid rgba(37,99,235,0.1)', borderRadius: '20px', padding: '22px', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
+              <p style={{ color: '#93c5fd', fontSize: '10px', letterSpacing: '2px', marginBottom: '10px', fontWeight: 700 }}>{c.label}</p>
               <p style={{ color: c.color, fontSize: '26px', fontWeight: 700 }}>{c.value}</p>
             </div>
           ))}
         </div>
 
         {/* Add Form */}
-        <div style={{ background: '#ffffff', border: '1.5px solid rgba(79,70,229,0.12)', borderRadius: '20px', overflow: 'hidden', marginBottom: '28px', boxShadow: '0 2px 12px rgba(79,70,229,0.07)' }}>
-          <div style={{ background: 'rgba(79,70,229,0.04)', borderBottom: '1.5px solid rgba(79,70,229,0.08)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '8px', height: '8px', background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '50%' }} />
-            <span style={{ color: '#4f46e5', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>ADD STITCHING RECORD</span>
+        <div style={{ background: '#ffffff', border: '1.5px solid rgba(37,99,235,0.12)', borderRadius: '20px', overflow: 'hidden', marginBottom: '28px', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
+          <div style={{ background: 'rgba(37,99,235,0.04)', borderBottom: '1.5px solid rgba(37,99,235,0.08)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '8px', height: '8px', background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', borderRadius: '50%' }} />
+            <span style={{ color: '#2563eb', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>ADD STITCHING RECORD</span>
           </div>
 
           <div style={{ padding: '24px' }}>
@@ -152,7 +152,7 @@ export default function StitchingPage() {
                   <input name={f.name} value={form[f.name as keyof typeof form]} onChange={f.onChange}
                     placeholder={f.placeholder} type={f.type}
                     style={f.type === 'date' ? { ...inputStyle, colorScheme: 'light' } : inputStyle}
-                    onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 4px rgba(79,70,229,0.1)' }}
+                    onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 4px rgba(37,99,235,0.1)' }}
                     onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }} />
                 </div>
               ))}
@@ -160,7 +160,7 @@ export default function StitchingPage() {
                 <label style={labelStyle}>TAILOR *</label>
                 <select name="tailor" value={form.tailor} onChange={handleChange}
                   style={{ ...inputStyle, cursor: 'pointer' }}
-                  onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 4px rgba(79,70,229,0.1)' }}
+                  onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 4px rgba(37,99,235,0.1)' }}
                   onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }}>
                   <option value="">Select</option>
                   {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
@@ -180,7 +180,7 @@ export default function StitchingPage() {
                   <label style={labelStyle}>{f.label}</label>
                   <input name={f.name} value={form[f.name as keyof typeof form]} onChange={handleChange}
                     placeholder={f.placeholder} type={f.type} style={inputStyle}
-                    onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 4px rgba(79,70,229,0.1)' }}
+                    onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 4px rgba(37,99,235,0.1)' }}
                     onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }} />
                 </div>
               ))}
@@ -188,12 +188,12 @@ export default function StitchingPage() {
 
             {/* Auto Total */}
             {autoTotal && (
-              <div style={{ background: 'rgba(79,70,229,0.05)', border: '1.5px solid rgba(79,70,229,0.15)', borderRadius: '14px', padding: '14px 18px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ background: 'rgba(37,99,235,0.05)', border: '1.5px solid rgba(37,99,235,0.15)', borderRadius: '14px', padding: '14px 18px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <p style={{ color: '#a5b4fc', fontSize: '10px', letterSpacing: '1.5px', marginBottom: '4px', fontWeight: 700 }}>CALCULATED TOTAL</p>
-                  <p style={{ color: '#4f46e5', fontSize: '22px', fontWeight: 700 }}>AED {autoTotal}</p>
+                  <p style={{ color: '#93c5fd', fontSize: '10px', letterSpacing: '1.5px', marginBottom: '4px', fontWeight: 700 }}>CALCULATED TOTAL</p>
+                  <p style={{ color: '#2563eb', fontSize: '22px', fontWeight: 700 }}>AED {autoTotal}</p>
                 </div>
-                <span style={{ color: '#4f46e5', fontSize: '24px' }}>✓</span>
+                <span style={{ color: '#2563eb', fontSize: '24px' }}>✓</span>
               </div>
             )}
 
@@ -202,12 +202,12 @@ export default function StitchingPage() {
               <label style={labelStyle}>REMARKS</label>
               <input name="remarks" value={form.remarks} onChange={handleChange}
                 placeholder="Optional notes..." style={inputStyle}
-                onFocus={e => { e.target.style.borderColor = '#4f46e5'; e.target.style.boxShadow = '0 0 0 4px rgba(79,70,229,0.1)' }}
+                onFocus={e => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 4px rgba(37,99,235,0.1)' }}
                 onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }} />
             </div>
 
             <button onClick={handleSubmit} disabled={loading}
-              style={{ background: loading ? 'rgba(79,70,229,0.15)' : 'linear-gradient(135deg,#4f46e5,#7c3aed)', color: loading ? '#9ca3af' : '#ffffff', padding: '12px 32px', borderRadius: '50px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 14px rgba(79,70,229,0.3)' }}>
+              style={{ background: loading ? 'rgba(37,99,235,0.15)' : 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: loading ? '#9ca3af' : '#ffffff', padding: '12px 32px', borderRadius: '50px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 14px rgba(37,99,235,0.3)' }}>
               {loading ? 'SAVING...' : '+ ADD RECORD'}
             </button>
           </div>
@@ -216,40 +216,40 @@ export default function StitchingPage() {
         {/* Filters */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <select value={filterMonth} onChange={e => setFilterMonth(parseInt(e.target.value))}
-            style={{ background: '#ffffff', border: '1.5px solid rgba(79,70,229,0.15)', borderRadius: '12px', padding: '10px 16px', color: '#4b5563', fontSize: '13px', outline: 'none', cursor: 'pointer' }}>
+            style={{ background: '#ffffff', border: '1.5px solid rgba(37,99,235,0.15)', borderRadius: '12px', padding: '10px 16px', color: '#4b5563', fontSize: '13px', outline: 'none', cursor: 'pointer' }}>
             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
           <select value={filterTailor} onChange={e => setFilterTailor(e.target.value)}
-            style={{ background: '#ffffff', border: '1.5px solid rgba(79,70,229,0.15)', borderRadius: '12px', padding: '10px 16px', color: '#4b5563', fontSize: '13px', outline: 'none', cursor: 'pointer' }}>
+            style={{ background: '#ffffff', border: '1.5px solid rgba(37,99,235,0.15)', borderRadius: '12px', padding: '10px 16px', color: '#4b5563', fontSize: '13px', outline: 'none', cursor: 'pointer' }}>
             <option value="">All Tailors</option>
             {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
           </select>
         </div>
 
         {/* Records Table */}
-        <div style={{ border: '1.5px solid rgba(79,70,229,0.12)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(79,70,229,0.07)' }}>
+        <div style={{ border: '1.5px solid rgba(37,99,235,0.12)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
-              <tr style={{ background: '#ede9fe', borderBottom: '1px solid #ddd6fe' }}>
+              <tr style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe' }}>
                 {['DATE','MD NO','TAILOR','PC','RATE','TOTAL','CLOTH','MTR','INV NO','REMARKS',''].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '13px 14px', color: '#4f46e5', fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700 }}>{h}</th>
+                  <th key={h} style={{ textAlign: 'left', padding: '13px 14px', color: '#2563eb', fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {records.map((r, idx) => (
                 <tr key={r.id}
-                  style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid rgba(79,70,229,0.05)' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#ede9fe')}
-                  onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#ffffff' : '#faf9ff')}>
+                  style={{ background: idx % 2 === 0 ? '#ffffff' : '#f8faff', borderBottom: '1px solid rgba(37,99,235,0.05)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
+                  onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? '#ffffff' : '#f8faff')}>
                   <td style={{ padding: '11px 14px', color: '#6b7280' }}>{r.date}</td>
-                  <td style={{ padding: '11px 14px', color: '#4f46e5', fontWeight: 700, fontFamily: 'monospace' }}>{r.md_no}</td>
+                  <td style={{ padding: '11px 14px', color: '#2563eb', fontWeight: 700, fontFamily: 'monospace' }}>{r.md_no}</td>
                   <td style={{ padding: '11px 14px' }}>
-                    <span style={{ background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)', color: '#4f46e5', padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }}>
+                    <span style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: '#2563eb', padding: '3px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 700 }}>
                       {r.tailor_code}
                     </span>
                   </td>
-                  <td style={{ padding: '11px 14px', color: '#1e1b4b', fontWeight: 600 }}>{r.pc_count}</td>
+                  <td style={{ padding: '11px 14px', color: '#1e293b', fontWeight: 600 }}>{r.pc_count}</td>
                   <td style={{ padding: '11px 14px', color: '#4b5563' }}>{r.rate}</td>
                   <td style={{ padding: '11px 14px', color: '#16a34a', fontWeight: 700 }}>AED {r.total}</td>
                   <td style={{ padding: '11px 14px', color: '#6b7280', fontSize: '12px' }}>{r.cloth || '—'}</td>
@@ -267,9 +267,9 @@ export default function StitchingPage() {
             </tbody>
             {records.length > 0 && (
               <tfoot>
-                <tr style={{ background: 'rgba(79,70,229,0.05)', borderTop: '1.5px solid rgba(79,70,229,0.12)' }}>
-                  <td colSpan={3} style={{ padding: '13px 14px', color: '#4f46e5', fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700 }}>TOTAL</td>
-                  <td style={{ padding: '13px 14px', color: '#4f46e5', fontWeight: 700 }}>{summary.total_pieces}</td>
+                <tr style={{ background: 'rgba(37,99,235,0.05)', borderTop: '1.5px solid rgba(37,99,235,0.12)' }}>
+                  <td colSpan={3} style={{ padding: '13px 14px', color: '#2563eb', fontSize: '10px', letterSpacing: '1.5px', fontWeight: 700 }}>TOTAL</td>
+                  <td style={{ padding: '13px 14px', color: '#2563eb', fontWeight: 700 }}>{summary.total_pieces}</td>
                   <td style={{ padding: '13px 14px' }} />
                   <td style={{ padding: '13px 14px', color: '#16a34a', fontWeight: 700 }}>AED {summary.total_amount}</td>
                   <td colSpan={5} />
