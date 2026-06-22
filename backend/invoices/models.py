@@ -81,7 +81,7 @@ class ShopStitching(models.Model):
 
 class JobInvoice(models.Model):
     inv_no = models.CharField(max_length=20, unique=True)   # MP001, MP002 …
-    model_no = models.CharField(max_length=7, unique=True, validators=[validate_model_no])
+    model_no = models.CharField(max_length=7, validators=[validate_model_no])
     date = models.DateField()
     pc_count = models.PositiveIntegerField()
     rate = models.DecimalField(max_digits=8, decimal_places=2)
