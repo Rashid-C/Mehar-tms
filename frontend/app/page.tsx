@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { getSummary, Summary } from '@/lib/api'
 
 const actions = [
-  { href: '/job-invoice', icon: '✦', title: 'Job Invoice',  desc: 'Shop entry · Order · Payment',      accent: '#4f46e5', rgb: '79,70,229',   gradient: 'linear-gradient(135deg,#4f46e5,#7c3aed)' },
+  { href: '/job-invoice', icon: '✦', title: 'Shop Entry',   desc: 'Shop · Order · Payment',      accent: '#4f46e5', rgb: '79,70,229',   gradient: 'linear-gradient(135deg,#4f46e5,#7c3aed)' },
   { href: '/report',      icon: '↓', title: 'Reports',      desc: 'Monthly PDF · per-tailor summary',  accent: '#0891b2', rgb: '8,145,178',   gradient: 'linear-gradient(135deg,#0891b2,#0e7490)' },
   { href: '/tailors',     icon: '人', title: 'Tailors',      desc: 'Manage tailor list',                accent: '#16a34a', rgb: '22,163,74',   gradient: 'linear-gradient(135deg,#16a34a,#15803d)' },
   { href: '/stitching',   icon: '⌀', title: 'Stitching',    desc: 'Shop stitching records',            accent: '#d97706', rgb: '217,119,6',   gradient: 'linear-gradient(135deg,#d97706,#b45309)' },

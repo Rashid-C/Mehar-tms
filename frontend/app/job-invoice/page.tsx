@@ -37,7 +37,6 @@ export default function JobInvoicePage() {
   const [shopSearchInput, setShopSearchInput] = useState('')
   const [loadingShop, setLoadingShop] = useState(false)
   const shopSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [showShopForm, setShowShopForm] = useState(false)
   const [isEditingShop, setIsEditingShop] = useState(false)
   const [editShopId, setEditShopId] = useState<number | null>(null)
   const [shopInvNo, setShopInvNo] = useState('')
@@ -167,15 +166,14 @@ export default function JobInvoicePage() {
   const resetShopForm = async () => {
     setShopModelNo(''); setShopPiece(''); setShopRate(''); setShopDate(today())
     setShopModelErr(''); setShopTailor(''); setShopRateAutoFilled(false); setShopLookupState('idle')
-    setIsEditingShop(false); setEditShopId(null); setShowShopForm(false)
+    setIsEditingShop(false); setEditShopId(null)
     const r = await getNextInvNo(); setShopInvNo(r.data.next_inv_no)
   }
 
   const openEditShop = (ji: JobInvoice) => {
     setShopInvNo(ji.inv_no); setShopModelNo(ji.model_no); setShopDate(ji.date)
     setShopPiece(String(ji.pc_count)); setShopRate(String(ji.rate)); setShopTailor(ji.tailor)
-    setShopModelErr(''); setIsEditingShop(true); setEditShopId(ji.id); setShowShopForm(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setShopModelErr(''); setShopLookupState('idle'); setIsEditingShop(true); setEditShopId(ji.id)
   }
 
   const validateModelNo = (val: string) => {
@@ -409,8 +407,8 @@ export default function JobInvoicePage() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ background: '#f0f6ff' }}>
-      <div className="max-w-5xl mx-auto">
-        <PageHeader title="Job Invoice" subtitle="SHOP · ORDER · PAYMENT" />
+      <div className="max-w-7xl mx-auto">
+        <PageHeader title="Shop Entry" subtitle="SHOP · ORDER · PAYMENT" />
 
         {success && (
           <div className="mb-5 px-4 py-3 rounded-xl text-sm font-semibold"
@@ -444,17 +442,29 @@ export default function JobInvoicePage() {
 
         {/* ══════════ SHOP TAB ══════════ */}
         {activeJob === 'shop' && (
-          <>
-            <div className="card mb-5" style={showShopForm ? {} : { borderColor: 'rgba(79,70,229,0.25)' }}>
-              {sectionHeader({
-                label: 'SHOP ENTRY', editLabel: `EDIT — ${shopInvNo}`,
-                showForm: showShopForm, isEditing: isEditingShop,
-                onOpen: () => { setIsEditingShop(false); setEditShopId(null); setShowShopForm(true) },
-                onClose: resetShopForm,
-              })}
-              {showShopForm && (
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+
+            {/* ── Left: Form (30%) ── */}
+            <div style={{ width: '30%', flexShrink: 0 }}>
+              <div className="card" style={{ position: 'sticky', top: '88px', overflow: 'hidden' }}>
+                <div className="flex items-center justify-between px-5 py-4"
+                  style={{ background: 'rgba(79,70,229,0.04)', borderBottom: '1.5px solid rgba(79,70,229,0.08)' }}>
+                  <div className="flex items-center gap-2">
+                    <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '50%' }} />
+                    <span className="text-[11px] font-bold tracking-widest" style={{ color: '#4f46e5', letterSpacing: '2px' }}>
+                      {isEditingShop ? `EDITING — ${shopInvNo}` : 'NEW SHOP ENTRY'}
+                    </span>
+                  </div>
+                  {isEditingShop && (
+                    <button type="button" onClick={resetShopForm}
+                      className="text-xs px-3 py-1.5 rounded-lg"
+                      style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer' }}>
+                      ✕ Cancel
+                    </button>
+                  )}
+                </div>
                 <form onSubmit={handleShopSubmit} className="flex flex-col gap-4 p-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>INVOICE NO</label>
                       <input className="field font-mono" value={shopInvNo} readOnly
@@ -476,15 +486,15 @@ export default function JobInvoicePage() {
                     {shopModelErr
                       ? <p className="text-xs mt-1" style={{ color: '#dc2626' }}>{shopModelErr}</p>
                       : shopLookupState === 'loading'
-                        ? <p className="text-xs mt-1 font-semibold" style={{ color: '#a5b4fc' }}>⟳ Looking up rate sheet...</p>
+                        ? <p className="text-xs mt-1 font-semibold" style={{ color: '#a5b4fc' }}>⟳ Looking up...</p>
                         : shopLookupState === 'found'
-                          ? <p className="text-xs mt-1 font-semibold" style={{ color: '#4f46e5' }}>✓ Rate auto-filled from rate sheet</p>
+                          ? <p className="text-xs mt-1 font-semibold" style={{ color: '#4f46e5' }}>✓ Rate auto-filled</p>
                           : shopLookupState === 'notfound'
-                            ? <p className="text-xs mt-1" style={{ color: '#f59e0b' }}>⚠ Not found in rate sheet — enter rate manually</p>
-                            : shopModelNo ? <p className="text-xs mt-1" style={{ color: '#16a34a' }}>{shopModelNo.length}/7 — valid</p>
+                            ? <p className="text-xs mt-1" style={{ color: '#f59e0b' }}>⚠ Not in rate sheet — enter manually</p>
+                            : shopModelNo ? <p className="text-xs mt-1" style={{ color: '#16a34a' }}>{shopModelNo.length}/7</p>
                             : null}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>PIECE</label>
                       <input type="number" min="1" className="field" value={shopPiece}
@@ -494,7 +504,7 @@ export default function JobInvoicePage() {
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>
                         RATE (AED)
                         {shopRateAutoFilled && (
-                          <span className="ml-2 normal-case font-normal" style={{ color: '#4f46e5', letterSpacing: 0 }}>auto-filled</span>
+                          <span className="ml-1 normal-case font-normal" style={{ color: '#4f46e5', letterSpacing: 0 }}>auto</span>
                         )}
                       </label>
                       <input type="number" min="0" step="0.01" className="field" value={shopRate}
@@ -505,114 +515,110 @@ export default function JobInvoicePage() {
                   {shopPiece && shopRate && !isNaN(+shopPiece) && !isNaN(+shopRate) && (
                     <div className="flex items-center justify-between px-4 py-3 rounded-xl"
                       style={{ background: 'rgba(79,70,229,0.05)', border: '1px solid rgba(79,70,229,0.15)' }}>
-                      <span className="text-xs tracking-widest" style={{ color: '#94a3b8' }}>TOTAL AMOUNT</span>
-                      <span className="font-bold text-xl" style={{ color: '#4f46e5' }}>AED {(+shopPiece * +shopRate).toFixed(2)}</span>
+                      <span className="text-xs tracking-widest" style={{ color: '#94a3b8' }}>TOTAL</span>
+                      <span className="font-bold text-base" style={{ color: '#4f46e5' }}>AED {(+shopPiece * +shopRate).toFixed(2)}</span>
                     </div>
                   )}
                   {tailorSelector({ ctx: 'shop', value: shopTailor, onChange: setShopTailor })}
-                  <div className="flex gap-3">
-                    <button type="submit" disabled={saving || !!shopModelErr} className="btn-gold flex-1">
-                      {saving ? 'Saving…' : isEditingShop ? 'Update Entry' : 'Save Shop Entry'}
-                    </button>
-                    {isEditingShop && <button type="button" onClick={resetShopForm} className="btn-ghost px-5">Cancel</button>}
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {/* Shop records */}
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>SAVED SHOP RECORDS</span>
-              <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5' }}>{shopTotal}</span>
-              <input className="field flex-1 text-xs" style={{ padding: '8px 12px' }}
-                placeholder="Search by INV NO, MODEL, DATE (YYYY-MM-DD), TAILOR…"
-                value={shopSearchInput} onChange={e => handleShopSearchChange(e.target.value)}
-                disabled={!!shopDayFilter} />
-            </div>
-
-            {/* Shop daily summary bar */}
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
-              style={{ background: 'rgba(79,70,229,0.04)', border: '1.5px solid rgba(79,70,229,0.12)' }}>
-              <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#a5b4fc', letterSpacing: '2px' }}>DAILY SUMMARY</span>
-              <input type="date" value={shopDayFilter} onChange={e => handleShopDayFilter(e.target.value)}
-                className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
-              {shopDayFilter && shopRecords.length > 0 && (
-                <>
-                  <div style={{ width: 1, height: 24, background: 'rgba(79,70,229,0.2)', flexShrink: 0 }} />
-                  <div className="flex gap-5 flex-1">
-                    <div>
-                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>PIECES</p>
-                      <p className="text-base font-bold" style={{ color: '#4f46e5' }}>
-                        {shopRecords.reduce((s, ji) => s + ji.pc_count, 0)} pc
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>AMOUNT</p>
-                      <p className="text-base font-bold" style={{ color: '#16a34a' }}>
-                        AED {shopRecords.reduce((s, ji) => s + parseFloat(String(ji.amount)), 0).toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>ENTRIES</p>
-                      <p className="text-base font-bold" style={{ color: '#1e1b4b' }}>{shopTotal}</p>
-                    </div>
-                  </div>
-                  <button onClick={() => handleShopDayFilter('')}
-                    className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
-                    style={{ background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)', color: '#4f46e5', cursor: 'pointer' }}>
-                    ✕ Clear
+                  <button type="submit" disabled={saving || !!shopModelErr} className="btn-gold w-full">
+                    {saving ? 'Saving…' : isEditingShop ? 'Update Entry' : 'Save Entry'}
                   </button>
-                </>
-              )}
-              {shopDayFilter && shopRecords.length === 0 && (
-                <span className="text-xs" style={{ color: '#d1d5db' }}>No records for this date</span>
-              )}
+                </form>
+              </div>
             </div>
 
-            {loadingShop ? (
-              <div className="flex items-center justify-center gap-2 py-12" style={{ color: '#94a3b8' }}>
-                <span className="spinner" /><span className="text-xs tracking-widest">LOADING…</span>
+            {/* ── Right: Records (70%) ── */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>RECORDS</span>
+                <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5' }}>{shopTotal}</span>
+                <input className="field flex-1 text-xs" style={{ padding: '8px 12px' }}
+                  placeholder="Search by INV NO, MODEL, DATE, TAILOR…"
+                  value={shopSearchInput} onChange={e => handleShopSearchChange(e.target.value)}
+                  disabled={!!shopDayFilter} />
               </div>
-            ) : shopRecords.length === 0 ? (
-              <div className="text-center py-12 text-xs tracking-widest rounded-xl"
-                style={{ color: '#cbd5e1', border: '1px solid #e2e8f0' }}>
-                {shopSearch ? 'NO RECORDS MATCH YOUR SEARCH' : 'NO RECORDS YET — CLICK + TO ADD FIRST ENTRY'}
+
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
+                style={{ background: 'rgba(79,70,229,0.04)', border: '1.5px solid rgba(79,70,229,0.12)' }}>
+                <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#a5b4fc', letterSpacing: '2px' }}>DAILY SUMMARY</span>
+                <input type="date" value={shopDayFilter} onChange={e => handleShopDayFilter(e.target.value)}
+                  className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
+                {shopDayFilter && shopRecords.length > 0 && (
+                  <>
+                    <div style={{ width: 1, height: 24, background: 'rgba(79,70,229,0.2)', flexShrink: 0 }} />
+                    <div className="flex gap-5 flex-1">
+                      <div>
+                        <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>PIECES</p>
+                        <p className="text-base font-bold" style={{ color: '#4f46e5' }}>
+                          {shopRecords.reduce((s, ji) => s + ji.pc_count, 0)} pc
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>AMOUNT</p>
+                        <p className="text-base font-bold" style={{ color: '#16a34a' }}>
+                          AED {shopRecords.reduce((s, ji) => s + parseFloat(String(ji.amount)), 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>ENTRIES</p>
+                        <p className="text-base font-bold" style={{ color: '#1e1b4b' }}>{shopTotal}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => handleShopDayFilter('')}
+                      className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
+                      style={{ background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)', color: '#4f46e5', cursor: 'pointer' }}>
+                      ✕ Clear
+                    </button>
+                  </>
+                )}
+                {shopDayFilter && shopRecords.length === 0 && (
+                  <span className="text-xs" style={{ color: '#d1d5db' }}>No records for this date</span>
+                )}
               </div>
-            ) : (
-              <>
-                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(79,70,229,0.15)', boxShadow: '0 1px 4px rgba(79,70,229,0.06)' }}>
-                  <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: '#ede9fe', borderBottom: '1px solid #ddd6fe' }}>
-                        {['INV NO', 'MODEL', 'DATE', 'PC', 'RATE', 'AMOUNT', 'TAILOR', ''].map(h => (
-                          <th key={h} className="text-left px-3 py-3 font-semibold"
-                            style={{ color: '#4f46e5', letterSpacing: '1.5px' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shopRecords.map((ji, idx) => (
-                        <tr key={ji.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid #f1f5f9' }}>
-                          <td className="px-3 py-2.5 font-mono font-bold" style={{ color: '#4f46e5' }}>{ji.inv_no}</td>
-                          <td className="px-3 py-2.5 font-semibold" style={{ color: '#1e1b4b' }}>{ji.model_no}</td>
-                          <td className="px-3 py-2.5" style={{ color: '#64748b' }}>{ji.date}</td>
-                          <td className="px-3 py-2.5" style={{ color: '#475569' }}>{ji.pc_count}</td>
-                          <td className="px-3 py-2.5" style={{ color: '#475569' }}>{ji.rate}</td>
-                          <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>AED {ji.amount}</td>
-                          <td className="px-3 py-2.5">
-                            <span className="font-bold px-1.5 py-0.5 rounded text-[10px]"
-                              style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5', border: '1px solid rgba(79,70,229,0.2)' }}>
-                              {ji.tailor_code}
-                            </span>
-                            <span className="ml-1.5" style={{ color: '#64748b' }}>{ji.tailor_name}</span>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            {rowActions({ onEdit: () => openEditShop(ji), onDelete: () => handleDeleteShop(ji.id) })}
-                          </td>
+
+              {loadingShop ? (
+                <div className="flex items-center justify-center gap-2 py-12" style={{ color: '#94a3b8' }}>
+                  <span className="spinner" /><span className="text-xs tracking-widest">LOADING…</span>
+                </div>
+              ) : shopRecords.length === 0 ? (
+                <div className="text-center py-12 text-xs tracking-widest rounded-xl"
+                  style={{ color: '#cbd5e1', border: '1px solid #e2e8f0' }}>
+                  {shopSearch ? 'NO RECORDS MATCH YOUR SEARCH' : 'NO RECORDS YET'}
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(79,70,229,0.15)', boxShadow: '0 1px 4px rgba(79,70,229,0.06)' }}>
+                    <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#ede9fe', borderBottom: '1px solid #ddd6fe' }}>
+                          {['INV NO', 'MODEL', 'DATE', 'PC', 'RATE', 'AMOUNT', 'TAILOR', ''].map(h => (
+                            <th key={h} className="text-left px-3 py-3 font-semibold"
+                              style={{ color: '#4f46e5', letterSpacing: '1.5px' }}>{h}</th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                    {shopRecords.length > 0 && (
+                      </thead>
+                      <tbody>
+                        {shopRecords.map((ji, idx) => (
+                          <tr key={ji.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid #f1f5f9' }}>
+                            <td className="px-3 py-2.5 font-mono font-bold" style={{ color: '#4f46e5' }}>{ji.inv_no}</td>
+                            <td className="px-3 py-2.5 font-semibold" style={{ color: '#1e1b4b' }}>{ji.model_no}</td>
+                            <td className="px-3 py-2.5" style={{ color: '#64748b' }}>{ji.date}</td>
+                            <td className="px-3 py-2.5" style={{ color: '#475569' }}>{ji.pc_count}</td>
+                            <td className="px-3 py-2.5" style={{ color: '#475569' }}>{ji.rate}</td>
+                            <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>AED {ji.amount}</td>
+                            <td className="px-3 py-2.5">
+                              <span className="font-bold px-1.5 py-0.5 rounded text-[10px]"
+                                style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5', border: '1px solid rgba(79,70,229,0.2)' }}>
+                                {ji.tailor_code}
+                              </span>
+                              <span className="ml-1.5" style={{ color: '#64748b' }}>{ji.tailor_name}</span>
+                            </td>
+                            <td className="px-3 py-2.5">
+                              {rowActions({ onEdit: () => openEditShop(ji), onDelete: () => handleDeleteShop(ji.id) })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
                       <tfoot>
                         <tr style={{ background: 'rgba(79,70,229,0.05)', borderTop: '1.5px solid rgba(79,70,229,0.15)' }}>
                           <td colSpan={3} className="px-3 py-2.5 text-[11px] font-bold tracking-widest" style={{ color: '#4f46e5' }}>TOTAL</td>
@@ -626,35 +632,35 @@ export default function JobInvoicePage() {
                           <td colSpan={2} />
                         </tr>
                       </tfoot>
-                    )}
-                  </table>
-                </div>
-                <div className="flex items-center justify-between mt-4 px-1">
-                  <span className="text-xs" style={{ color: '#94a3b8' }}>
-                    Showing {(shopPage - 1) * PAGE_SIZE + 1}–{Math.min(shopPage * PAGE_SIZE, shopTotal)} of {shopTotal}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setShopPage(p => p - 1)} disabled={shopPage <= 1}
-                      className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                      style={{ background: '#ffffff', border: '1px solid #e2e8f0',
-                        color: shopPage <= 1 ? '#cbd5e1' : '#475569', cursor: shopPage <= 1 ? 'not-allowed' : 'pointer' }}>
-                      ← Prev
-                    </button>
-                    <span className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                      style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5' }}>
-                      {shopPage} / {shopTotalPages}
-                    </span>
-                    <button onClick={() => setShopPage(p => p + 1)} disabled={shopPage >= shopTotalPages}
-                      className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                      style={{ background: '#ffffff', border: '1px solid #e2e8f0',
-                        color: shopPage >= shopTotalPages ? '#cbd5e1' : '#475569', cursor: shopPage >= shopTotalPages ? 'not-allowed' : 'pointer' }}>
-                      Next →
-                    </button>
+                    </table>
                   </div>
-                </div>
-              </>
-            )}
-          </>
+                  <div className="flex items-center justify-between mt-4 px-1">
+                    <span className="text-xs" style={{ color: '#94a3b8' }}>
+                      Showing {(shopPage - 1) * PAGE_SIZE + 1}–{Math.min(shopPage * PAGE_SIZE, shopTotal)} of {shopTotal}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setShopPage(p => p - 1)} disabled={shopPage <= 1}
+                        className="text-xs px-3 py-1.5 rounded-lg transition-all"
+                        style={{ background: '#ffffff', border: '1px solid #e2e8f0',
+                          color: shopPage <= 1 ? '#cbd5e1' : '#475569', cursor: shopPage <= 1 ? 'not-allowed' : 'pointer' }}>
+                        ← Prev
+                      </button>
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                        style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5' }}>
+                        {shopPage} / {shopTotalPages}
+                      </span>
+                      <button onClick={() => setShopPage(p => p + 1)} disabled={shopPage >= shopTotalPages}
+                        className="text-xs px-3 py-1.5 rounded-lg transition-all"
+                        style={{ background: '#ffffff', border: '1px solid #e2e8f0',
+                          color: shopPage >= shopTotalPages ? '#cbd5e1' : '#475569', cursor: shopPage >= shopTotalPages ? 'not-allowed' : 'pointer' }}>
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         )}
 
         {/* ══════════ ORDER TAB ══════════ */}
