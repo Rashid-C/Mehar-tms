@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import OrderReadymade, RateSheet, Tailor, Invoice, ShopStitching, TailorOrder, Payment, JobInvoice
+from .models import RateSheet, Tailor, Invoice, ShopStitching, TailorOrder, Payment, JobInvoice
 
 class TailorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,12 +32,6 @@ class ShopStitchingSerializer(serializers.ModelSerializer):
         model = ShopStitching
         fields = '__all__'
         read_only_fields = ['total', 'tailor_code', 'tailor_name']
-
-class OrderReadymadeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderReadymade
-        fields = '__all__'
-        read_only_fields = ['total_qty', 'total_amount']
 
 
 class JobInvoiceSerializer(serializers.ModelSerializer):

@@ -4,10 +4,10 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Sum, Max, Q
 import re
-from .models import Tailor, Invoice, RateSheet, ShopStitching, OrderReadymade, TailorOrder, Payment, JobInvoice
+from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Payment, JobInvoice
 from .serializers import (
     TailorSerializer, InvoiceSerializer, RateSheetSerializer,
-    ShopStitchingSerializer, OrderReadymadeSerializer,
+    ShopStitchingSerializer,
     TailorOrderSerializer, PaymentSerializer, JobInvoiceSerializer,
 )
 
@@ -140,37 +140,6 @@ class ShopStitchingViewSet(viewsets.ModelViewSet):
         })
 
 
-
-class OrderReadymadeViewSet(viewsets.ModelViewSet):
-    queryset = OrderReadymade.objects.all()
-    serializer_class = OrderReadymadeSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['md_no', 'ord_no', 'barcode']
-    ordering_fields = ['date', 'total_amount']
-
-    def get_queryset(self):
-        queryset = OrderReadymade.objects.all()
-        month = self.request.query_params.get('month')
-        status = self.request.query_params.get('status')
-        date = self.request.query_params.get('date')
-        if month:
-            queryset = queryset.filter(date__month=month)
-        if status:
-            queryset = queryset.filter(status=status)
-        if date:
-            queryset = queryset.filter(date=date)
-        return queryset
-
-    @action(detail=False, methods=['get'])
-    def summary(self, request):
-        queryset = self.get_queryset()
-        total_qty = queryset.aggregate(Sum('total_qty'))['total_qty__sum'] or 0
-        total_amount = queryset.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-        return Response({
-            'total_orders': queryset.count(),
-            'total_qty': total_qty,
-            'total_amount': total_amount,
-        })
 
 
 class JobInvoicePagination(PageNumberPagination):

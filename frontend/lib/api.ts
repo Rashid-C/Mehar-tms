@@ -63,11 +63,7 @@ export default api
 export const getTailors = () => api.get<Tailor[]>('/tailors/')
 export const createTailor = (data: object) => api.post<Tailor>('/tailors/', data)
 export const getInvoices = (params?: object) => api.get<Invoice[]>('/invoices/', { params })
-export const createInvoice = (data: object) => api.post('/invoices/', data)
 export const getSummary = (params?: object) => api.get<Summary>('/invoices/summary/', { params })
-export const getInvoice = (id: number) => api.get<Invoice>(`/invoices/${id}/`)
-export const updateInvoice = (id: number, data: object) => api.put(`/invoices/${id}/`, data)
-export const deleteInvoice = (id: number) => api.delete(`/invoices/${id}/`)
 
 
 
@@ -126,35 +122,6 @@ export const getStitchingSummary = (params?: object) => api.get<{
   total_records: number
 }>('/stitching/summary/', { params })
 
-
-export interface OrderReadymade {
-  id: number
-  md_no: string
-  date: string
-  ord_date: string
-  ord_no: string
-  inv_no: string
-  barcode: string
-  size: string
-  rate: number
-  qty_sm: number
-  qty_a1: number
-  qty_f2: number
-  total_qty: number
-  total_amount: number
-  status: string
-  remarks: string
-}
-
-export const getOrders = (params?: object) => api.get<OrderReadymade[]>('/orders/', { params })
-export const createOrder = (data: object) => api.post('/orders/', data)
-export const updateOrder = (id: number, data: object) => api.put(`/orders/${id}/`, data)
-export const deleteOrder = (id: number) => api.delete(`/orders/${id}/`)
-export const getOrderSummary = (params?: object) => api.get<{
-  total_orders: number
-  total_qty: number
-  total_amount: number
-}>('/orders/summary/', { params })
 
 
 export interface TailorOrder {

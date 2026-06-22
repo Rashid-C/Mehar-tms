@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    OrderReadymadeViewSet, ShopStitchingViewSet, TailorViewSet,
+    ShopStitchingViewSet, TailorViewSet,
     InvoiceViewSet, RateSheetViewSet, TailorOrderViewSet, PaymentViewSet,
     JobInvoiceViewSet,
 )
@@ -11,7 +11,6 @@ router.register(r'tailors', TailorViewSet)
 router.register(r'invoices', InvoiceViewSet)
 router.register(r'ratesheets', RateSheetViewSet)
 router.register(r'stitching', ShopStitchingViewSet)
-router.register(r'orders', OrderReadymadeViewSet)
 router.register(r'tailor-orders', TailorOrderViewSet)
 router.register(r'payments', PaymentViewSet)
 router.register(r'job-invoices', JobInvoiceViewSet)

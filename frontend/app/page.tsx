@@ -16,16 +16,6 @@ const actions = [
     titleColor: '#D4AF37',
   },
   {
-    href: '/add',
-    icon: '✦',
-    title: 'New Invoice',
-    desc: 'Create a standard invoice',
-    iconBg: 'rgba(212,175,55,0.1)',
-    iconColor: '#D4AF37',
-    borderColor: 'rgba(212,175,55,0.15)',
-    titleColor: 'rgba(255,255,255,0.85)',
-  },
-  {
     href: '/report',
     icon: '↓',
     title: 'Reports',
@@ -54,16 +44,6 @@ const actions = [
     iconColor: '#fbbf24',
     borderColor: 'rgba(251,191,36,0.15)',
     titleColor: '#fbbf24',
-  },
-  {
-    href: '/orders',
-    icon: '◈',
-    title: 'Orders',
-    desc: 'Ready-made order tracking',
-    iconBg: 'rgba(167,139,250,0.08)',
-    iconColor: '#a78bfa',
-    borderColor: 'rgba(167,139,250,0.15)',
-    titleColor: '#a78bfa',
   },
 ]
 
