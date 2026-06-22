@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${geist.className} bg-gray-950 min-h-screen`}>
+      <body className={`${geist.className} min-h-screen`}>
         <Navbar />
         {children}
       </body>

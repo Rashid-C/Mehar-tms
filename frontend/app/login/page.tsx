@@ -31,23 +31,23 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4" style={{ background: '#08080f' }}>
+    <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
 
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-block mb-5" style={{ border: '2px solid rgba(212,175,55,0.3)', borderRadius: '50%', padding: 6, background: 'rgba(212,175,55,0.05)' }}>
+          <div className="inline-block mb-5" style={{ border: '2px solid rgba(79,70,229,0.25)', borderRadius: '50%', padding: 6, background: 'rgba(79,70,229,0.06)' }}>
             <Image src="/logo.png" alt="Mehar Pardha" width={76} height={76} className="rounded-full object-contain" priority />
           </div>
-          <h1 className="font-bold text-xl tracking-widest mb-1" style={{ color: '#D4AF37', letterSpacing: '2.5px' }}>MEHAR PARDHA</h1>
-          <p className="text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '2px' }}>TAILOR MANAGEMENT SYSTEM</p>
-          <div className="mx-auto mt-4" style={{ width: 60, height: 1, background: 'linear-gradient(90deg,transparent,#D4AF37,transparent)' }} />
+          <h1 className="font-bold text-xl tracking-widest mb-1" style={{ color: '#4f46e5', letterSpacing: '2.5px' }}>MEHAR PARDHA</h1>
+          <p className="text-xs tracking-widest" style={{ color: '#9ca3af', letterSpacing: '2px' }}>TAILOR MANAGEMENT SYSTEM</p>
+          <div className="mx-auto mt-4" style={{ width: 60, height: 1, background: 'linear-gradient(90deg,transparent,#4f46e5,transparent)' }} />
         </div>
 
         {/* Card */}
         <div className="card p-7">
-          <h2 className="font-semibold text-base mb-1" style={{ color: '#ffffff' }}>Sign In</h2>
-          <p className="text-xs mb-6" style={{ color: 'rgba(255,255,255,0.3)' }}>Enter your credentials to continue</p>
+          <h2 className="font-bold text-lg mb-1" style={{ color: '#1e1b4b' }}>Sign In</h2>
+          <p className="text-xs mb-6" style={{ color: '#9ca3af' }}>Enter your credentials to continue</p>
 
           <Alert type="error" message={error} />
 
@@ -67,12 +67,12 @@ export default function Login() {
             </FormField>
 
             <button onClick={handleLogin} disabled={loading} className="btn-gold w-full mt-2">
-              {loading ? <><span className="spinner" /> SIGNING IN...</> : 'SIGN IN'}
+              {loading ? <><span className="spinner" /> SIGNING IN...</> : 'Sign In →'}
             </button>
           </div>
         </div>
 
-        <p className="text-center mt-6 text-xs" style={{ color: 'rgba(255,255,255,0.15)', letterSpacing: '0.5px' }}>
+        <p className="text-center mt-6 text-xs" style={{ color: '#c4b5fd', letterSpacing: '0.5px' }}>
           Mehar Pardha · Deira, Dubai · {new Date().getFullYear()}
         </p>
       </div>

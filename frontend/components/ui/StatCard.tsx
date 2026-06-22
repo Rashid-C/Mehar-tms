@@ -1,42 +1,33 @@
 interface StatCardProps {
   label: string
   value: string | number
-  color?: 'gold' | 'blue' | 'white' | 'green'
-  glow?: 'gold' | 'blue'
+  color?: 'blue' | 'green' | 'dark' | 'gold'
+  glow?: 'blue' | 'green'
 }
 
 const colorMap = {
-  gold:  '#D4AF37',
-  blue:  '#60a5fa',
-  white: '#ffffff',
-  green: '#4ade80',
+  blue:  '#4f46e5',
+  green: '#16a34a',
+  dark:  '#1e1b4b',
+  gold:  '#4f46e5',
 }
 
-const glowMap = {
-  gold: 'rgba(212,175,55,0.12)',
-  blue: 'rgba(59,130,246,0.1)',
-}
-
-export default function StatCard({ label, value, color = 'white', glow }: StatCardProps) {
+export default function StatCard({ label, value, color = 'dark' }: StatCardProps) {
+  const accent = colorMap[color]
   return (
-    <div
-      className="card relative overflow-hidden p-5 sm:p-6"
-      style={glow ? { borderColor: glowMap[glow].replace('0.1', '0.25') } : {}}
-    >
-      {glow && (
-        <div style={{
-          position: 'absolute', top: 0, right: 0, width: 80, height: 80,
-          background: `radial-gradient(circle, ${glowMap[glow]} 0%, transparent 70%)`,
-          borderRadius: '0 14px 0 80px',
-        }} />
-      )}
-      <p className="text-xs font-semibold tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '2px' }}>
+    <div className="card relative overflow-hidden p-5 sm:p-6">
+      <div style={{
+        position: 'absolute', top: 0, right: 0, width: 90, height: 90,
+        background: `radial-gradient(circle at top right, ${accent}14 0%, transparent 70%)`,
+        borderRadius: '0 20px 0 90px',
+      }} />
+      <p className="text-[11px] font-bold tracking-widest mb-3" style={{ color: '#a5b4fc', letterSpacing: '2px' }}>
         {label}
       </p>
-      <p className="text-3xl font-bold leading-none" style={{ color: colorMap[color] }}>
+      <p className="text-3xl font-bold leading-none" style={{ color: accent }}>
         {value}
       </p>
-      <div className="mt-4 h-px" style={{ background: `linear-gradient(90deg, ${colorMap[color]}44, transparent)` }} />
+      <div className="mt-4 h-px" style={{ background: `linear-gradient(90deg, ${accent}55, transparent)` }} />
     </div>
   )
 }

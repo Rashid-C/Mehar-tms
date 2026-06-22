@@ -36,12 +36,12 @@ export default function Tailors() {
   }
 
   return (
-    <main className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ background: '#08080f' }}>
+    <main className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-4 mb-6">
-          <a href="/" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.35)' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#D4AF37')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}>
+          <a href="/" className="text-sm font-medium transition-colors" style={{ color: '#9ca3af' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#4f46e5')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
             ← Back
           </a>
         </div>
@@ -50,9 +50,9 @@ export default function Tailors() {
 
         {/* Add Form */}
         <div className="card overflow-hidden mb-6">
-          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(212,175,55,0.04)', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
-            <div style={{ width: 8, height: 8, background: '#D4AF37', borderRadius: '50%' }} />
-            <span className="text-xs font-semibold tracking-widest" style={{ color: 'rgba(212,175,55,0.8)', letterSpacing: '2px' }}>ADD NEW TAILOR</span>
+          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(79,70,229,0.04)', borderBottom: '1.5px solid rgba(79,70,229,0.08)' }}>
+            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '50%' }} />
+            <span className="text-xs font-bold tracking-widest" style={{ color: '#4f46e5', letterSpacing: '2px' }}>ADD NEW TAILOR</span>
           </div>
           <div className="p-5 sm:p-7 space-y-5">
             <Alert type="error" message={error} />
@@ -82,23 +82,24 @@ export default function Tailors() {
 
         {/* Tailor list */}
         <div className="card overflow-hidden">
-          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(212,175,55,0.04)', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
-            <div style={{ width: 8, height: 8, background: '#D4AF37', borderRadius: '50%' }} />
-            <span className="text-xs font-semibold tracking-widest" style={{ color: 'rgba(212,175,55,0.8)', letterSpacing: '2px' }}>ALL TAILORS</span>
-            <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(212,175,55,0.12)', color: '#D4AF37' }}>{tailors.length}</span>
+          <div className="flex items-center gap-3 px-6 py-4" style={{ background: 'rgba(79,70,229,0.04)', borderBottom: '1.5px solid rgba(79,70,229,0.08)' }}>
+            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', borderRadius: '50%' }} />
+            <span className="text-xs font-bold tracking-widest" style={{ color: '#4f46e5', letterSpacing: '2px' }}>ALL TAILORS</span>
+            <span className="ml-auto text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(79,70,229,0.1)', color: '#4f46e5', border: '1px solid rgba(79,70,229,0.2)' }}>{tailors.length}</span>
           </div>
-          <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+          <div className="divide-y" style={{ borderColor: 'rgba(79,70,229,0.06)' }}>
             {tailors.length === 0 ? (
-              <p className="text-center py-10 text-sm tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>NO TAILORS YET</p>
+              <p className="text-center py-10 text-sm tracking-widest" style={{ color: '#d1d5db' }}>NO TAILORS YET</p>
             ) : tailors.map(t => (
               <div key={t.id} className="flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold px-2.5 py-1 rounded" style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.25)', color: '#D4AF37' }}>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg"
+                    style={{ background: 'rgba(79,70,229,0.08)', border: '1.5px solid rgba(79,70,229,0.2)', color: '#4f46e5' }}>
                     {t.code}
                   </span>
-                  <span className="text-sm font-medium text-white">{t.name}</span>
+                  <span className="text-sm font-medium" style={{ color: '#1e1b4b' }}>{t.name}</span>
                 </div>
-                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{t.phone || '—'}</span>
+                <span className="text-xs" style={{ color: '#9ca3af' }}>{t.phone || '—'}</span>
               </div>
             ))}
           </div>

@@ -66,9 +66,15 @@ export default function JobInvoicePage() {
   const [isEditingPay, setIsEditingPay] = useState(false)
   const [editPayId, setEditPayId] = useState<number | null>(null)
   const [payTailor, setPayTailor] = useState<number | ''>('')
+  const [payDate, setPayDate] = useState(today())
   const [payAmount, setPayAmount] = useState('')
   const [payRemarks, setPayRemarks] = useState('')
   const [tailorSummary, setTailorSummary] = useState<TailorJobSummary[]>([])
+
+  // ── Daily filters ─────────────────────────────────────────────────────
+  const [shopDayFilter, setShopDayFilter] = useState('')
+  const [orderDayFilter, setOrderDayFilter] = useState('')
+  const [payDayFilter, setPayDayFilter] = useState('')
 
   // ── Loaders ───────────────────────────────────────────────────────────
   const loadShop = useCallback(async (p = shopPage, q = shopSearch) => {
@@ -116,6 +122,17 @@ export default function JobInvoicePage() {
     setShopSearchInput(val)
     if (shopSearchTimer.current) clearTimeout(shopSearchTimer.current)
     shopSearchTimer.current = setTimeout(() => { setShopSearch(val); setShopPage(1) }, 400)
+  }
+
+  const handleShopDayFilter = (date: string) => {
+    setShopDayFilter(date)
+    setShopPage(1)
+    if (date) {
+      setShopSearchInput(''); setShopSearch('')
+      loadShop(1, date)
+    } else {
+      loadShop(1, '')
+    }
   }
 
   // ── Shared new-tailor creation ────────────────────────────────────────
@@ -205,7 +222,6 @@ export default function JobInvoicePage() {
   const openEditOrder = (o: TailorOrder) => {
     setOrderInvNo(o.inv_no); setOrderTailor(o.tailor); setOrderDate(o.date)
     setOrderQty(String(o.quantity))
-    // reverse-calculate rate from stored total amount
     const rate = o.quantity > 0 ? (parseFloat(String(o.amount)) / o.quantity).toFixed(2) : String(o.amount)
     setOrderAmount(rate)
     setIsEditingOrder(true); setEditOrderId(o.id); setShowOrderForm(true)
@@ -232,12 +248,12 @@ export default function JobInvoicePage() {
 
   // ── PAYMENT handlers ──────────────────────────────────────────────────
   const resetPayForm = () => {
-    setPayTailor(''); setPayAmount(''); setPayRemarks('')
+    setPayTailor(''); setPayDate(today()); setPayAmount(''); setPayRemarks('')
     setIsEditingPay(false); setEditPayId(null); setShowPayForm(false)
   }
 
   const openEditPay = (p: Payment) => {
-    setPayTailor(p.tailor); setPayAmount(String(p.amount)); setPayRemarks(p.remarks || '')
+    setPayTailor(p.tailor); setPayDate(p.date); setPayAmount(String(p.amount)); setPayRemarks(p.remarks || '')
     setIsEditingPay(true); setEditPayId(p.id); setShowPayForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -247,7 +263,7 @@ export default function JobInvoicePage() {
     if (!payTailor) { fail('Please select a tailor'); return }
     setSaving(true)
     try {
-      const payload = { tailor: payTailor, date: today(), amount: parseFloat(payAmount), remarks: payRemarks }
+      const payload = { tailor: payTailor, date: payDate, amount: parseFloat(payAmount), remarks: payRemarks }
       if (isEditingPay && editPayId) { await updatePayment(editPayId, payload); notify('Payment updated') }
       else { await createPayment(payload); notify('Payment saved') }
       resetPayForm(); await Promise.all([loadPays(), loadSummary()])
@@ -261,18 +277,19 @@ export default function JobInvoicePage() {
 
   // ── Derived ───────────────────────────────────────────────────────────
   const shopTotalPages = Math.ceil(shopTotal / PAGE_SIZE) || 1
+  const filteredOrders = orderDayFilter ? orderRecords.filter(o => o.date === orderDayFilter) : orderRecords
+  const filteredPays   = payDayFilter   ? payRecords.filter(p => p.date === payDayFilter)     : payRecords
 
   const jobs = [
-    { id: 'shop'    as JobType, num: 1, label: 'Shop',    color: '#D4AF37', rgb: '212,175,55'  },
-    { id: 'order'   as JobType, num: 2, label: 'Order',   color: '#60a5fa', rgb: '96,165,250'  },
-    { id: 'payment' as JobType, num: 3, label: 'Payment', color: '#4ade80', rgb: '74,222,128'  },
+    { id: 'shop'    as JobType, num: 1, label: 'Shop',    color: '#4f46e5', rgb: '79,70,229'   },
+    { id: 'order'   as JobType, num: 2, label: 'Order',   color: '#0891b2', rgb: '8,145,178'   },
+    { id: 'payment' as JobType, num: 3, label: 'Payment', color: '#16a34a', rgb: '22,163,74'   },
   ]
 
-  const lbl: React.CSSProperties = { color: 'rgba(255,255,255,0.35)', letterSpacing: '1.5px' }
+  const lbl: React.CSSProperties = { color: '#64748b', letterSpacing: '1.5px' }
 
   // ── Re-usable tailor selector with inline create ───────────────────────
-  // Called as a function (not JSX element) to avoid remount on parent re-render
-  const tailorSelector = ({ ctx, value, onChange, accentRgb = '212,175,55' }: {
+  const tailorSelector = ({ ctx, value, onChange, accentRgb = '79,70,229' }: {
     ctx: JobType; value: number | ''; onChange: (v: number) => void; accentRgb?: string
   }) => (
     <div>
@@ -294,28 +311,28 @@ export default function JobInvoicePage() {
       {newTailorCtx === ctx && (
         <div className="mt-3 p-4 rounded-xl flex flex-col gap-3"
           style={{ background: `rgba(${accentRgb},0.04)`, border: `1px solid rgba(${accentRgb},0.15)` }}>
-          <p className="text-[11px] font-bold tracking-widest" style={{ color: `rgba(${accentRgb},0.7)` }}>NEW TAILOR</p>
+          <p className="text-[11px] font-bold tracking-widest" style={{ color: `rgba(${accentRgb},0.8)` }}>NEW TAILOR</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>CODE *</label>
+              <label className="block text-[11px] tracking-widest mb-1" style={{ color: '#94a3b8' }}>CODE *</label>
               <input className="field text-sm" value={newCode} onChange={e => setNewCode(e.target.value.toUpperCase())}
                 onKeyDown={e => e.key === 'Enter' && e.preventDefault()} placeholder="e.g. MJ" maxLength={20} />
             </div>
             <div>
-              <label className="block text-[11px] tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>NAME *</label>
+              <label className="block text-[11px] tracking-widest mb-1" style={{ color: '#94a3b8' }}>NAME *</label>
               <input className="field text-sm" value={newName} onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && e.preventDefault()} placeholder="Full name" />
             </div>
           </div>
           <div>
-            <label className="block text-[11px] tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>PHONE (optional)</label>
+            <label className="block text-[11px] tracking-widest mb-1" style={{ color: '#94a3b8' }}>PHONE (optional)</label>
             <input className="field text-sm" value={newPhone} onChange={e => setNewPhone(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && e.preventDefault()} placeholder="+971 …" />
           </div>
           <div className="flex gap-2">
             <button type="button" disabled={creatingTailor} onClick={handleCreateTailor}
               className="text-xs px-4 py-2 rounded-lg font-semibold transition-all"
-              style={{ background: `rgba(${accentRgb},0.15)`, border: `1px solid rgba(${accentRgb},0.4)`, color: `rgb(${accentRgb})` }}>
+              style={{ background: `rgba(${accentRgb},0.1)`, border: `1px solid rgba(${accentRgb},0.3)`, color: `rgb(${accentRgb})` }}>
               {creatingTailor ? 'Saving…' : 'Create & Select'}
             </button>
             <button type="button" onClick={closeNewTailor} className="btn-ghost text-xs px-4 py-2">Cancel</button>
@@ -326,12 +343,12 @@ export default function JobInvoicePage() {
   )
 
   // ── Re-usable section header with + toggle ─────────────────────────
-  const sectionHeader = ({ label, isEditing, editLabel, showForm, onOpen, onClose, accentColor = '#D4AF37' }: {
+  const sectionHeader = ({ label, isEditing, editLabel, showForm, onOpen, onClose, accentColor = '#4f46e5' }: {
     label: string; isEditing: boolean; editLabel: string; showForm: boolean
     onOpen: () => void; onClose: () => void; accentColor?: string
   }) => (
     <div className="flex items-center justify-between px-5 py-4 cursor-pointer"
-      style={{ borderBottom: showForm ? '1px solid rgba(255,255,255,0.06)' : 'none' }}
+      style={{ borderBottom: showForm ? '1px solid #f1f5f9' : 'none' }}
       onClick={() => !showForm && onOpen()}>
       <span className="text-xs font-bold tracking-widest" style={{ color: accentColor, letterSpacing: '2px' }}>
         {isEditing ? editLabel : label}
@@ -339,13 +356,13 @@ export default function JobInvoicePage() {
       {!showForm ? (
         <button type="button" onClick={e => { e.stopPropagation(); onOpen() }}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-xl font-bold transition-all"
-          style={{ background: `linear-gradient(135deg,${accentColor},${accentColor}aa)`, color: '#08080f' }}>
+          style={{ background: `linear-gradient(135deg,${accentColor},${accentColor}cc)`, color: '#ffffff' }}>
           +
         </button>
       ) : (
         <button type="button" onClick={onClose}
           className="text-xs px-3 py-1.5 rounded-lg transition-all"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
+          style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b' }}>
           ✕ Close
         </button>
       )}
@@ -356,26 +373,26 @@ export default function JobInvoicePage() {
   const rowActions = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => (
     <div className="flex gap-1.5">
       <button onClick={onEdit} className="text-[11px] px-2 py-1 rounded transition-all"
-        style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa', cursor: 'pointer' }}>✎</button>
+        style={{ background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)', color: '#4f46e5', cursor: 'pointer' }}>✎</button>
       <button onClick={onDelete} className="text-[11px] px-2 py-1 rounded transition-all"
-        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', cursor: 'pointer' }}>×</button>
+        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', cursor: 'pointer' }}>×</button>
     </div>
   )
 
   return (
-    <main className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ background: '#08080f' }}>
+    <main className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ background: '#f0f6ff' }}>
       <div className="max-w-5xl mx-auto">
         <PageHeader title="Job Invoice" subtitle="SHOP · ORDER · PAYMENT" />
 
         {success && (
           <div className="mb-5 px-4 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ade80' }}>
+            style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', color: '#16a34a' }}>
             {success}
           </div>
         )}
         {error && (
           <div className="mb-5 px-4 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>
+            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#dc2626' }}>
             {error}
           </div>
         )}
@@ -386,10 +403,10 @@ export default function JobInvoicePage() {
             <button key={j.id} onClick={() => { setActiveJob(j.id); setError(''); closeNewTailor() }}
               className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl transition-all text-sm font-semibold"
               style={activeJob === j.id
-                ? { background: `rgba(${j.rgb},0.14)`, border: `1.5px solid rgba(${j.rgb},0.45)`, color: j.color }
-                : { background: 'rgba(255,255,255,0.03)', border: '1.5px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.4)' }}>
+                ? { background: `rgba(${j.rgb},0.12)`, border: `1.5px solid rgba(${j.rgb},0.4)`, color: j.color }
+                : { background: '#ffffff', border: '1.5px solid #e2e8f0', color: '#94a3b8' }}>
               <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                style={activeJob === j.id ? { background: j.color, color: '#08080f' } : { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
+                style={activeJob === j.id ? { background: j.color, color: '#ffffff' } : { background: '#f1f5f9', color: '#94a3b8' }}>
                 {j.num}
               </span>
               {j.label}
@@ -400,7 +417,7 @@ export default function JobInvoicePage() {
         {/* ══════════ SHOP TAB ══════════ */}
         {activeJob === 'shop' && (
           <>
-            <div className="card mb-5" style={showShopForm ? {} : { borderColor: 'rgba(212,175,55,0.2)' }}>
+            <div className="card mb-5" style={showShopForm ? {} : { borderColor: 'rgba(79,70,229,0.25)' }}>
               {sectionHeader({
                 label: 'SHOP ENTRY', editLabel: `EDIT — ${shopInvNo}`,
                 showForm: showShopForm, isEditing: isEditingShop,
@@ -413,7 +430,7 @@ export default function JobInvoicePage() {
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>INVOICE NO</label>
                       <input className="field font-mono" value={shopInvNo} readOnly
-                        style={{ color: '#D4AF37', cursor: 'default', background: 'rgba(212,175,55,0.04)' }} />
+                        style={{ color: '#4f46e5', cursor: 'default', background: 'rgba(79,70,229,0.04)' }} />
                     </div>
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>DATE</label>
@@ -422,7 +439,7 @@ export default function JobInvoicePage() {
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>
-                      MODEL NO <span style={{ color: 'rgba(255,255,255,0.18)', fontWeight: 400 }}>(A–Z, 0–9 · max 7)</span>
+                      MODEL NO <span style={{ color: '#cbd5e1', fontWeight: 400 }}>(A–Z, 0–9 · max 7)</span>
                     </label>
                     <input className="field" value={shopModelNo}
                       onChange={e => {
@@ -430,10 +447,10 @@ export default function JobInvoicePage() {
                         setShopModelNo(v); setShopModelErr(v ? validateModelNo(v) : '')
                       }}
                       placeholder="e.g. MD101" maxLength={7} required
-                      style={shopModelErr ? { borderColor: 'rgba(239,68,68,0.6)' } : {}} />
+                      style={shopModelErr ? { borderColor: 'rgba(239,68,68,0.5)' } : {}} />
                     {shopModelErr
-                      ? <p className="text-xs mt-1" style={{ color: '#f87171' }}>{shopModelErr}</p>
-                      : shopModelNo ? <p className="text-xs mt-1" style={{ color: 'rgba(74,222,128,0.7)' }}>{shopModelNo.length}/7 — valid</p>
+                      ? <p className="text-xs mt-1" style={{ color: '#dc2626' }}>{shopModelErr}</p>
+                      : shopModelNo ? <p className="text-xs mt-1" style={{ color: '#16a34a' }}>{shopModelNo.length}/7 — valid</p>
                       : null}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -450,9 +467,9 @@ export default function JobInvoicePage() {
                   </div>
                   {shopPiece && shopRate && !isNaN(+shopPiece) && !isNaN(+shopRate) && (
                     <div className="flex items-center justify-between px-4 py-3 rounded-xl"
-                      style={{ background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.18)' }}>
-                      <span className="text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>TOTAL AMOUNT</span>
-                      <span className="font-bold text-xl" style={{ color: '#D4AF37' }}>AED {(+shopPiece * +shopRate).toFixed(2)}</span>
+                      style={{ background: 'rgba(79,70,229,0.05)', border: '1px solid rgba(79,70,229,0.15)' }}>
+                      <span className="text-xs tracking-widest" style={{ color: '#94a3b8' }}>TOTAL AMOUNT</span>
+                      <span className="font-bold text-xl" style={{ color: '#4f46e5' }}>AED {(+shopPiece * +shopRate).toFixed(2)}</span>
                     </div>
                   )}
                   {tailorSelector({ ctx: 'shop', value: shopTailor, onChange: setShopTailor })}
@@ -467,49 +484,90 @@ export default function JobInvoicePage() {
             </div>
 
             {/* Shop records */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '2px' }}>SAVED SHOP RECORDS</span>
-              <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37' }}>{shopTotal}</span>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>SAVED SHOP RECORDS</span>
+              <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5' }}>{shopTotal}</span>
               <input className="field flex-1 text-xs" style={{ padding: '8px 12px' }}
                 placeholder="Search by INV NO, MODEL, DATE (YYYY-MM-DD), TAILOR…"
-                value={shopSearchInput} onChange={e => handleShopSearchChange(e.target.value)} />
+                value={shopSearchInput} onChange={e => handleShopSearchChange(e.target.value)}
+                disabled={!!shopDayFilter} />
+            </div>
+
+            {/* Shop daily summary bar */}
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
+              style={{ background: 'rgba(79,70,229,0.04)', border: '1.5px solid rgba(79,70,229,0.12)' }}>
+              <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#a5b4fc', letterSpacing: '2px' }}>DAILY SUMMARY</span>
+              <input type="date" value={shopDayFilter} onChange={e => handleShopDayFilter(e.target.value)}
+                className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
+              {shopDayFilter && shopRecords.length > 0 && (
+                <>
+                  <div style={{ width: 1, height: 24, background: 'rgba(79,70,229,0.2)', flexShrink: 0 }} />
+                  <div className="flex gap-5 flex-1">
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>PIECES</p>
+                      <p className="text-base font-bold" style={{ color: '#4f46e5' }}>
+                        {shopRecords.reduce((s, ji) => s + ji.pc_count, 0)} pc
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>AMOUNT</p>
+                      <p className="text-base font-bold" style={{ color: '#16a34a' }}>
+                        AED {shopRecords.reduce((s, ji) => s + parseFloat(String(ji.amount)), 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#a5b4fc' }}>ENTRIES</p>
+                      <p className="text-base font-bold" style={{ color: '#1e1b4b' }}>{shopTotal}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => handleShopDayFilter('')}
+                    className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
+                    style={{ background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)', color: '#4f46e5', cursor: 'pointer' }}>
+                    ✕ Clear
+                  </button>
+                </>
+              )}
+              {shopDayFilter && shopRecords.length === 0 && (
+                <span className="text-xs" style={{ color: '#d1d5db' }}>No records for this date</span>
+              )}
             </div>
 
             {loadingShop ? (
-              <div className="flex items-center justify-center gap-2 py-12" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <div className="flex items-center justify-center gap-2 py-12" style={{ color: '#94a3b8' }}>
                 <span className="spinner" /><span className="text-xs tracking-widest">LOADING…</span>
               </div>
             ) : shopRecords.length === 0 ? (
               <div className="text-center py-12 text-xs tracking-widest rounded-xl"
-                style={{ color: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                style={{ color: '#cbd5e1', border: '1px solid #e2e8f0' }}>
                 {shopSearch ? 'NO RECORDS MATCH YOUR SEARCH' : 'NO RECORDS YET — CLICK + TO ADD FIRST ENTRY'}
               </div>
             ) : (
               <>
-                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(212,175,55,0.12)' }}>
+                <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(79,70,229,0.15)', boxShadow: '0 1px 4px rgba(79,70,229,0.06)' }}>
                   <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ background: '#0f0f1a', borderBottom: '1px solid rgba(212,175,55,0.15)' }}>
+                      <tr style={{ background: '#ede9fe', borderBottom: '1px solid #ddd6fe' }}>
                         {['INV NO', 'MODEL', 'DATE', 'PC', 'RATE', 'AMOUNT', 'TAILOR', ''].map(h => (
                           <th key={h} className="text-left px-3 py-3 font-semibold"
-                            style={{ color: 'rgba(212,175,55,0.55)', letterSpacing: '1.5px' }}>{h}</th>
+                            style={{ color: '#4f46e5', letterSpacing: '1.5px' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {shopRecords.map((ji, idx) => (
-                        <tr key={ji.id} style={{ background: idx % 2 === 0 ? '#08080f' : '#0a0a12', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                          <td className="px-3 py-2.5 font-mono font-bold" style={{ color: '#D4AF37' }}>{ji.inv_no}</td>
-                          <td className="px-3 py-2.5 font-semibold" style={{ color: 'rgba(255,255,255,0.7)' }}>{ji.model_no}</td>
-                          <td className="px-3 py-2.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{ji.date}</td>
-                          <td className="px-3 py-2.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{ji.pc_count}</td>
-                          <td className="px-3 py-2.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{ji.rate}</td>
-                          <td className="px-3 py-2.5 font-bold" style={{ color: '#4ade80' }}>AED {ji.amount}</td>
+                        <tr key={ji.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid #f1f5f9' }}>
+                          <td className="px-3 py-2.5 font-mono font-bold" style={{ color: '#4f46e5' }}>{ji.inv_no}</td>
+                          <td className="px-3 py-2.5 font-semibold" style={{ color: '#1e1b4b' }}>{ji.model_no}</td>
+                          <td className="px-3 py-2.5" style={{ color: '#64748b' }}>{ji.date}</td>
+                          <td className="px-3 py-2.5" style={{ color: '#475569' }}>{ji.pc_count}</td>
+                          <td className="px-3 py-2.5" style={{ color: '#475569' }}>{ji.rate}</td>
+                          <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>AED {ji.amount}</td>
                           <td className="px-3 py-2.5">
                             <span className="font-bold px-1.5 py-0.5 rounded text-[10px]"
-                              style={{ background: 'rgba(212,175,55,0.1)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.2)' }}>
+                              style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5', border: '1px solid rgba(79,70,229,0.2)' }}>
                               {ji.tailor_code}
                             </span>
+                            <span className="ml-1.5" style={{ color: '#64748b' }}>{ji.tailor_name}</span>
                           </td>
                           <td className="px-3 py-2.5">
                             {rowActions({ onEdit: () => openEditShop(ji), onDelete: () => handleDeleteShop(ji.id) })}
@@ -517,27 +575,42 @@ export default function JobInvoicePage() {
                         </tr>
                       ))}
                     </tbody>
+                    {shopRecords.length > 0 && (
+                      <tfoot>
+                        <tr style={{ background: 'rgba(79,70,229,0.05)', borderTop: '1.5px solid rgba(79,70,229,0.15)' }}>
+                          <td colSpan={3} className="px-3 py-2.5 text-[11px] font-bold tracking-widest" style={{ color: '#4f46e5' }}>TOTAL</td>
+                          <td className="px-3 py-2.5 font-bold" style={{ color: '#4f46e5' }}>
+                            {shopRecords.reduce((s, ji) => s + ji.pc_count, 0)} pc
+                          </td>
+                          <td className="px-3 py-2.5" />
+                          <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>
+                            AED {shopRecords.reduce((s, ji) => s + parseFloat(String(ji.amount)), 0).toFixed(2)}
+                          </td>
+                          <td colSpan={2} />
+                        </tr>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
                 <div className="flex items-center justify-between mt-4 px-1">
-                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  <span className="text-xs" style={{ color: '#94a3b8' }}>
                     Showing {(shopPage - 1) * PAGE_SIZE + 1}–{Math.min(shopPage * PAGE_SIZE, shopTotal)} of {shopTotal}
                   </span>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setShopPage(p => p - 1)} disabled={shopPage <= 1}
                       className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                        color: shopPage <= 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', cursor: shopPage <= 1 ? 'not-allowed' : 'pointer' }}>
+                      style={{ background: '#ffffff', border: '1px solid #e2e8f0',
+                        color: shopPage <= 1 ? '#cbd5e1' : '#475569', cursor: shopPage <= 1 ? 'not-allowed' : 'pointer' }}>
                       ← Prev
                     </button>
                     <span className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                      style={{ background: 'rgba(212,175,55,0.08)', color: '#D4AF37' }}>
+                      style={{ background: 'rgba(79,70,229,0.08)', color: '#4f46e5' }}>
                       {shopPage} / {shopTotalPages}
                     </span>
                     <button onClick={() => setShopPage(p => p + 1)} disabled={shopPage >= shopTotalPages}
                       className="text-xs px-3 py-1.5 rounded-lg transition-all"
-                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                        color: shopPage >= shopTotalPages ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', cursor: shopPage >= shopTotalPages ? 'not-allowed' : 'pointer' }}>
+                      style={{ background: '#ffffff', border: '1px solid #e2e8f0',
+                        color: shopPage >= shopTotalPages ? '#cbd5e1' : '#475569', cursor: shopPage >= shopTotalPages ? 'not-allowed' : 'pointer' }}>
                       Next →
                     </button>
                   </div>
@@ -550,12 +623,12 @@ export default function JobInvoicePage() {
         {/* ══════════ ORDER TAB ══════════ */}
         {activeJob === 'order' && (
           <>
-            <div className="card mb-5" style={showOrderForm ? {} : { borderColor: 'rgba(96,165,250,0.2)' }}>
+            <div className="card mb-5" style={showOrderForm ? {} : { borderColor: 'rgba(8,145,178,0.25)' }}>
               {sectionHeader({
                 label: 'ORDER ENTRY', editLabel: 'EDIT ORDER',
                 showForm: showOrderForm, isEditing: isEditingOrder,
                 onOpen: () => { setIsEditingOrder(false); setEditOrderId(null); setShowOrderForm(true) },
-                onClose: resetOrderForm, accentColor: '#60a5fa',
+                onClose: resetOrderForm, accentColor: '#0891b2',
               })}
               {showOrderForm && (
                 <form onSubmit={handleOrderSubmit} className="flex flex-col gap-4 p-5">
@@ -563,14 +636,14 @@ export default function JobInvoicePage() {
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>INVOICE NO</label>
                       <input className="field font-mono" value={orderInvNo} readOnly
-                        style={{ color: '#60a5fa', cursor: 'default', background: 'rgba(96,165,250,0.04)' }} />
+                        style={{ color: '#0891b2', cursor: 'default', background: 'rgba(8,145,178,0.04)' }} />
                     </div>
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>DATE</label>
                       <input type="date" className="field" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
                     </div>
                   </div>
-                  {tailorSelector({ ctx: 'order', value: orderTailor, onChange: setOrderTailor, accentRgb: '96,165,250' })}
+                  {tailorSelector({ ctx: 'order', value: orderTailor, onChange: setOrderTailor, accentRgb: '8,145,178' })}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>NO OF QUANTITY</label>
@@ -585,11 +658,11 @@ export default function JobInvoicePage() {
                   </div>
                   {orderQty && orderAmount && !isNaN(+orderQty) && !isNaN(+orderAmount) && +orderQty > 0 && +orderAmount > 0 && (
                     <div className="flex items-center justify-between px-4 py-3 rounded-xl"
-                      style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.18)' }}>
-                      <span className="text-xs tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      style={{ background: 'rgba(8,145,178,0.05)', border: '1px solid rgba(8,145,178,0.2)' }}>
+                      <span className="text-xs tracking-widest" style={{ color: '#94a3b8' }}>
                         {orderQty} × AED {parseFloat(orderAmount).toFixed(2)}
                       </span>
-                      <span className="font-bold text-xl" style={{ color: '#60a5fa' }}>
+                      <span className="font-bold text-xl" style={{ color: '#0891b2' }}>
                         AED {(+orderQty * +orderAmount).toFixed(2)}
                       </span>
                     </div>
@@ -597,7 +670,7 @@ export default function JobInvoicePage() {
                   <div className="flex gap-3">
                     <button type="submit" disabled={saving}
                       className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
-                      style={{ background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff' }}>
+                      style={{ background: 'linear-gradient(135deg,#0891b2,#0e7490)', color: '#fff' }}>
                       {saving ? 'Saving…' : isEditingOrder ? 'Update Order' : 'Save Order'}
                     </button>
                     {isEditingOrder && <button type="button" onClick={resetOrderForm} className="btn-ghost px-5">Cancel</button>}
@@ -607,45 +680,84 @@ export default function JobInvoicePage() {
             </div>
 
             {/* Order records */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '2px' }}>SAVED ORDER RECORDS</span>
-              <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa' }}>{orderRecords.length}</span>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>SAVED ORDER RECORDS</span>
+              <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(8,145,178,0.08)', color: '#0891b2' }}>{orderRecords.length}</span>
+            </div>
+
+            {/* Order daily summary bar */}
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
+              style={{ background: 'rgba(8,145,178,0.04)', border: '1.5px solid rgba(8,145,178,0.12)' }}>
+              <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#67e8f9', letterSpacing: '2px' }}>DAILY SUMMARY</span>
+              <input type="date" value={orderDayFilter} onChange={e => setOrderDayFilter(e.target.value)}
+                className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
+              {orderDayFilter && filteredOrders.length > 0 && (
+                <>
+                  <div style={{ width: 1, height: 24, background: 'rgba(8,145,178,0.25)', flexShrink: 0 }} />
+                  <div className="flex gap-5 flex-1">
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#67e8f9' }}>QUANTITY</p>
+                      <p className="text-base font-bold" style={{ color: '#0891b2' }}>
+                        {filteredOrders.reduce((s, o) => s + o.quantity, 0)} qty
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#67e8f9' }}>AMOUNT</p>
+                      <p className="text-base font-bold" style={{ color: '#16a34a' }}>
+                        AED {filteredOrders.reduce((s, o) => s + parseFloat(String(o.amount)), 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#67e8f9' }}>ENTRIES</p>
+                      <p className="text-base font-bold" style={{ color: '#1e1b4b' }}>{filteredOrders.length}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setOrderDayFilter('')}
+                    className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
+                    style={{ background: 'rgba(8,145,178,0.08)', border: '1px solid rgba(8,145,178,0.2)', color: '#0891b2', cursor: 'pointer' }}>
+                    ✕ Clear
+                  </button>
+                </>
+              )}
+              {orderDayFilter && filteredOrders.length === 0 && (
+                <span className="text-xs" style={{ color: '#d1d5db' }}>No records for this date</span>
+              )}
             </div>
 
             {loadingOrders ? (
-              <div className="flex items-center justify-center gap-2 py-12" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <div className="flex items-center justify-center gap-2 py-12" style={{ color: '#94a3b8' }}>
                 <span className="spinner" /><span className="text-xs tracking-widest">LOADING…</span>
               </div>
-            ) : orderRecords.length === 0 ? (
+            ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12 text-xs tracking-widest rounded-xl"
-                style={{ color: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                NO ORDER RECORDS YET — CLICK + TO ADD FIRST ENTRY
+                style={{ color: '#cbd5e1', border: '1px solid #e2e8f0' }}>
+                {orderDayFilter ? 'NO ORDER RECORDS FOR THIS DATE' : 'NO ORDER RECORDS YET — CLICK + TO ADD FIRST ENTRY'}
               </div>
             ) : (
-              <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(96,165,250,0.12)' }}>
+              <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(8,145,178,0.15)', boxShadow: '0 1px 4px rgba(8,145,178,0.06)' }}>
                 <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: '#0f0f1a', borderBottom: '1px solid rgba(96,165,250,0.15)' }}>
+                    <tr style={{ background: '#ecfeff', borderBottom: '1px solid #cffafe' }}>
                       {['INV NO', 'DATE', 'TAILOR', 'QTY', 'AMOUNT', ''].map(h => (
                         <th key={h} className="text-left px-3 py-3 font-semibold"
-                          style={{ color: 'rgba(96,165,250,0.55)', letterSpacing: '1.5px' }}>{h}</th>
+                          style={{ color: '#0891b2', letterSpacing: '1.5px' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {orderRecords.map((o, idx) => (
-                      <tr key={o.id} style={{ background: idx % 2 === 0 ? '#08080f' : '#0a0a12', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td className="px-3 py-2.5 font-mono font-bold" style={{ color: '#60a5fa' }}>{o.inv_no || '—'}</td>
-                        <td className="px-3 py-2.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{o.date}</td>
+                    {filteredOrders.map((o, idx) => (
+                      <tr key={o.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid #f1f5f9' }}>
+                        <td className="px-3 py-2.5 font-mono font-bold" style={{ color: '#0891b2' }}>{o.inv_no || '—'}</td>
+                        <td className="px-3 py-2.5" style={{ color: '#64748b' }}>{o.date}</td>
                         <td className="px-3 py-2.5">
                           <span className="font-bold px-1.5 py-0.5 rounded text-[10px]"
-                            style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)' }}>
+                            style={{ background: 'rgba(8,145,178,0.08)', color: '#0891b2', border: '1px solid rgba(8,145,178,0.2)' }}>
                             {o.tailor_code}
                           </span>
-                          <span className="ml-2" style={{ color: 'rgba(255,255,255,0.4)' }}>{o.tailor_name}</span>
+                          <span className="ml-2" style={{ color: '#64748b' }}>{o.tailor_name}</span>
                         </td>
-                        <td className="px-3 py-2.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{o.quantity}</td>
-                        <td className="px-3 py-2.5 font-bold" style={{ color: '#4ade80' }}>AED {o.amount}</td>
+                        <td className="px-3 py-2.5" style={{ color: '#475569' }}>{o.quantity}</td>
+                        <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>AED {o.amount}</td>
                         <td className="px-3 py-2.5">
                           {rowActions({ onEdit: () => openEditOrder(o), onDelete: () => handleDeleteOrder(o.id) })}
                         </td>
@@ -653,10 +765,14 @@ export default function JobInvoicePage() {
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: '#0d0d1a', borderTop: '1px solid rgba(96,165,250,0.15)' }}>
-                      <td colSpan={3} className="px-3 py-2.5 text-[11px] font-bold tracking-widest" style={{ color: 'rgba(96,165,250,0.5)' }}>TOTAL</td>
-                      <td className="px-3 py-2.5 font-bold" style={{ color: '#4ade80' }}>
-                        AED {orderRecords.reduce((s, o) => s + parseFloat(String(o.amount)), 0).toFixed(2)}
+                    <tr style={{ background: 'rgba(8,145,178,0.05)', borderTop: '1.5px solid rgba(8,145,178,0.15)' }}>
+                      <td colSpan={2} className="px-3 py-2.5 text-[11px] font-bold tracking-widest" style={{ color: '#0891b2' }}>TOTAL</td>
+                      <td className="px-3 py-2.5" />
+                      <td className="px-3 py-2.5 font-bold" style={{ color: '#0891b2' }}>
+                        {filteredOrders.reduce((s, o) => s + o.quantity, 0)} qty
+                      </td>
+                      <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>
+                        AED {filteredOrders.reduce((s, o) => s + parseFloat(String(o.amount)), 0).toFixed(2)}
                       </td>
                       <td />
                     </tr>
@@ -670,28 +786,26 @@ export default function JobInvoicePage() {
         {/* ══════════ PAYMENT TAB ══════════ */}
         {activeJob === 'payment' && (
           <>
-            <div className="card mb-5" style={showPayForm ? {} : { borderColor: 'rgba(74,222,128,0.2)' }}>
+            <div className="card mb-5" style={showPayForm ? {} : { borderColor: 'rgba(22,163,74,0.25)' }}>
               {sectionHeader({
                 label: 'RELEASE PAYMENT', editLabel: 'EDIT PAYMENT',
                 showForm: showPayForm, isEditing: isEditingPay,
                 onOpen: () => { setIsEditingPay(false); setEditPayId(null); setShowPayForm(true) },
-                onClose: resetPayForm, accentColor: '#4ade80',
+                onClose: resetPayForm, accentColor: '#16a34a',
               })}
               {showPayForm && (
                 <form onSubmit={handlePaySubmit} className="flex flex-col gap-4 p-5">
 
-                  {/* Date — read only */}
                   <div>
                     <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>DATE</label>
-                    <input className="field" value={today()} readOnly
-                      style={{ color: 'rgba(255,255,255,0.4)', cursor: 'default', background: 'rgba(255,255,255,0.02)' }} />
+                    <input type="date" className="field" value={payDate} onChange={e => setPayDate(e.target.value)} required />
                   </div>
 
-                  {/* Tailor — only worked tailors, no create */}
+                  {/* Tailor */}
                   <div>
                     <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>TAILOR</label>
                     {tailorSummary.length === 0 ? (
-                      <p className="text-xs py-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                      <p className="text-xs py-3" style={{ color: '#94a3b8' }}>
                         No tailors have worked yet — add Shop or Order entries first.
                       </p>
                     ) : (
@@ -707,32 +821,32 @@ export default function JobInvoicePage() {
                     )}
                   </div>
 
-                  {/* Tailor earnings summary (appears when tailor selected) */}
+                  {/* Tailor earnings summary */}
                   {payTailor !== '' && (() => {
                     const s = tailorSummary.find(x => x.tailor_id === Number(payTailor))
                     if (!s) return null
                     return (
                       <div className="rounded-xl px-4 py-3 flex flex-col gap-1.5"
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        style={{ background: '#faf9ff', border: '1px solid #e2e8f0' }}>
                         <div className="flex justify-between text-xs">
-                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Shop</span>
-                          <span style={{ color: '#D4AF37' }}>AED {s.shop_amount.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Order</span>
-                          <span style={{ color: '#60a5fa' }}>AED {s.order_amount.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px', marginTop: '2px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Total Earned</span>
-                          <span className="font-bold" style={{ color: '#fff' }}>AED {s.total_amount.toFixed(2)}</span>
+                          <span style={{ color: '#94a3b8' }}>Shop</span>
+                          <span style={{ color: '#4f46e5' }}>AED {s.shop_amount.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span style={{ color: 'rgba(255,255,255,0.35)' }}>Already Paid</span>
-                          <span style={{ color: '#f87171' }}>− AED {s.paid_amount.toFixed(2)}</span>
+                          <span style={{ color: '#94a3b8' }}>Order</span>
+                          <span style={{ color: '#0891b2' }}>AED {s.order_amount.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: '1px solid rgba(74,222,128,0.2)' }}>
-                          <span style={{ color: 'rgba(74,222,128,0.8)' }}>Pending Balance</span>
-                          <span style={{ color: s.balance > 0 ? '#4ade80' : '#f87171' }}>AED {s.balance.toFixed(2)}</span>
+                        <div className="flex justify-between text-xs" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>
+                          <span style={{ color: '#94a3b8' }}>Total Earned</span>
+                          <span className="font-bold" style={{ color: '#1e1b4b' }}>AED {s.total_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span style={{ color: '#94a3b8' }}>Already Paid</span>
+                          <span style={{ color: '#dc2626' }}>− AED {s.paid_amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold pt-1" style={{ borderTop: '1px solid rgba(22,163,74,0.2)' }}>
+                          <span style={{ color: '#16a34a' }}>Pending Balance</span>
+                          <span style={{ color: s.balance > 0 ? '#16a34a' : '#dc2626' }}>AED {s.balance.toFixed(2)}</span>
                         </div>
                       </div>
                     )
@@ -743,14 +857,13 @@ export default function JobInvoicePage() {
                     <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>RELEASE AMOUNT (AED)</label>
                     <input type="number" min="0" step="0.01" className="field" value={payAmount}
                       onChange={e => setPayAmount(e.target.value)} placeholder="0.00" required />
-                    {/* Balance after this payment */}
                     {payTailor !== '' && payAmount && !isNaN(+payAmount) && +payAmount > 0 && (() => {
                       const s = tailorSummary.find(x => x.tailor_id === Number(payTailor))
                       if (!s) return null
                       const remaining = s.balance - parseFloat(payAmount)
                       return (
                         <p className="text-[11px] mt-1.5 font-semibold"
-                          style={{ color: remaining >= 0 ? 'rgba(74,222,128,0.7)' : '#f87171' }}>
+                          style={{ color: remaining >= 0 ? '#16a34a' : '#dc2626' }}>
                           {remaining >= 0
                             ? `Balance after payment: AED ${remaining.toFixed(2)}`
                             : `Overpayment by AED ${Math.abs(remaining).toFixed(2)}`}
@@ -761,14 +874,14 @@ export default function JobInvoicePage() {
 
                   {/* Remarks */}
                   <div>
-                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>REMARKS <span style={{ color: 'rgba(255,255,255,0.2)', fontWeight: 400 }}>(optional)</span></label>
+                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>REMARKS <span style={{ color: '#cbd5e1', fontWeight: 400 }}>(optional)</span></label>
                     <input className="field" value={payRemarks} onChange={e => setPayRemarks(e.target.value)} placeholder="e.g. advance, full payment…" />
                   </div>
 
                   <div className="flex gap-3">
                     <button type="submit" disabled={saving}
                       className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
-                      style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff' }}>
+                      style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff' }}>
                       {saving ? 'Saving…' : isEditingPay ? 'Update Payment' : 'Release Payment'}
                     </button>
                     {isEditingPay && <button type="button" onClick={resetPayForm} className="btn-ghost px-5">Cancel</button>}
@@ -778,44 +891,77 @@ export default function JobInvoicePage() {
             </div>
 
             {/* Payment records */}
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '2px' }}>SAVED PAYMENT RECORDS</span>
-              <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80' }}>{payRecords.length}</span>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>SAVED PAYMENT RECORDS</span>
+              <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(22,163,74,0.08)', color: '#16a34a' }}>{payRecords.length}</span>
+            </div>
+
+            {/* Payment daily summary bar */}
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
+              style={{ background: 'rgba(22,163,74,0.04)', border: '1.5px solid rgba(22,163,74,0.12)' }}>
+              <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#86efac', letterSpacing: '2px' }}>DAILY SUMMARY</span>
+              <input type="date" value={payDayFilter} onChange={e => setPayDayFilter(e.target.value)}
+                className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
+              {payDayFilter && filteredPays.length > 0 && (
+                <>
+                  <div style={{ width: 1, height: 24, background: 'rgba(22,163,74,0.25)', flexShrink: 0 }} />
+                  <div className="flex gap-5 flex-1">
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#86efac' }}>PAYMENTS</p>
+                      <p className="text-base font-bold" style={{ color: '#1e1b4b' }}>{filteredPays.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#86efac' }}>TOTAL PAID</p>
+                      <p className="text-base font-bold" style={{ color: '#16a34a' }}>
+                        AED {filteredPays.reduce((s, p) => s + parseFloat(String(p.amount)), 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => setPayDayFilter('')}
+                    className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
+                    style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', color: '#16a34a', cursor: 'pointer' }}>
+                    ✕ Clear
+                  </button>
+                </>
+              )}
+              {payDayFilter && filteredPays.length === 0 && (
+                <span className="text-xs" style={{ color: '#d1d5db' }}>No payments for this date</span>
+              )}
             </div>
 
             {loadingPays ? (
-              <div className="flex items-center justify-center gap-2 py-12" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <div className="flex items-center justify-center gap-2 py-12" style={{ color: '#94a3b8' }}>
                 <span className="spinner" /><span className="text-xs tracking-widest">LOADING…</span>
               </div>
-            ) : payRecords.length === 0 ? (
+            ) : filteredPays.length === 0 ? (
               <div className="text-center py-12 text-xs tracking-widest rounded-xl"
-                style={{ color: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                NO PAYMENT RECORDS YET — CLICK + TO ADD FIRST ENTRY
+                style={{ color: '#cbd5e1', border: '1px solid #e2e8f0' }}>
+                {payDayFilter ? 'NO PAYMENTS FOR THIS DATE' : 'NO PAYMENT RECORDS YET — CLICK + TO ADD FIRST ENTRY'}
               </div>
             ) : (
-              <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(74,222,128,0.12)' }}>
+              <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(22,163,74,0.15)', boxShadow: '0 1px 4px rgba(22,163,74,0.06)' }}>
                 <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: '#0f0f1a', borderBottom: '1px solid rgba(74,222,128,0.15)' }}>
+                    <tr style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0' }}>
                       {['DATE', 'TAILOR', 'AMOUNT', 'REMARKS', ''].map(h => (
                         <th key={h} className="text-left px-3 py-3 font-semibold"
-                          style={{ color: 'rgba(74,222,128,0.55)', letterSpacing: '1.5px' }}>{h}</th>
+                          style={{ color: '#16a34a', letterSpacing: '1.5px' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {payRecords.map((p, idx) => (
-                      <tr key={p.id} style={{ background: idx % 2 === 0 ? '#08080f' : '#0a0a12', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td className="px-3 py-2.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{p.date}</td>
+                    {filteredPays.map((p, idx) => (
+                      <tr key={p.id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#faf9ff', borderBottom: '1px solid #f1f5f9' }}>
+                        <td className="px-3 py-2.5" style={{ color: '#64748b' }}>{p.date}</td>
                         <td className="px-3 py-2.5">
                           <span className="font-bold px-1.5 py-0.5 rounded text-[10px]"
-                            style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.2)' }}>
+                            style={{ background: 'rgba(22,163,74,0.08)', color: '#16a34a', border: '1px solid rgba(22,163,74,0.2)' }}>
                             {p.tailor_code}
                           </span>
-                          <span className="ml-2" style={{ color: 'rgba(255,255,255,0.4)' }}>{p.tailor_name}</span>
+                          <span className="ml-2" style={{ color: '#64748b' }}>{p.tailor_name}</span>
                         </td>
-                        <td className="px-3 py-2.5 font-bold" style={{ color: '#4ade80' }}>AED {p.amount}</td>
-                        <td className="px-3 py-2.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{p.remarks || '—'}</td>
+                        <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>AED {p.amount}</td>
+                        <td className="px-3 py-2.5" style={{ color: '#94a3b8' }}>{p.remarks || '—'}</td>
                         <td className="px-3 py-2.5">
                           {rowActions({ onEdit: () => openEditPay(p), onDelete: () => handleDeletePay(p.id) })}
                         </td>
@@ -823,10 +969,10 @@ export default function JobInvoicePage() {
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: '#0d0d1a', borderTop: '1px solid rgba(74,222,128,0.15)' }}>
-                      <td colSpan={2} className="px-3 py-2.5 text-[11px] font-bold tracking-widest" style={{ color: 'rgba(74,222,128,0.5)' }}>TOTAL</td>
-                      <td className="px-3 py-2.5 font-bold" style={{ color: '#4ade80' }}>
-                        AED {payRecords.reduce((s, p) => s + parseFloat(String(p.amount)), 0).toFixed(2)}
+                    <tr style={{ background: 'rgba(22,163,74,0.05)', borderTop: '1px solid rgba(22,163,74,0.15)' }}>
+                      <td colSpan={2} className="px-3 py-2.5 text-[11px] font-bold tracking-widest" style={{ color: '#16a34a' }}>TOTAL</td>
+                      <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>
+                        AED {filteredPays.reduce((s, p) => s + parseFloat(String(p.amount)), 0).toFixed(2)}
                       </td>
                       <td /><td />
                     </tr>
