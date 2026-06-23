@@ -12,9 +12,16 @@ from .serializers import (
 )
 
 
+class TailorPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+
 class TailorViewSet(viewsets.ModelViewSet):
-    queryset = Tailor.objects.all()
+    queryset = Tailor.objects.all().order_by('code')
     serializer_class = TailorSerializer
+    pagination_class = TailorPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['code', 'name']
 
@@ -228,14 +235,16 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
         for j in job_qs:
             tid = j.tailor.id
             if tid not in by_tailor:
-                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': j.tailor.code, 'tailor_name': j.tailor.name, 'shop_amount': 0.0, 'order_amount': 0.0, 'paid_amount': 0.0}
+                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': j.tailor.code, 'tailor_name': j.tailor.name, 'shop_amount': 0.0, 'shop_qty': 0, 'order_amount': 0.0, 'order_qty': 0, 'paid_amount': 0.0}
             by_tailor[tid]['shop_amount'] += float(j.amount)
+            by_tailor[tid]['shop_qty'] += j.pc_count
 
         for o in order_qs:
             tid = o.tailor.id
             if tid not in by_tailor:
-                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': o.tailor.code, 'tailor_name': o.tailor.name, 'shop_amount': 0.0, 'order_amount': 0.0, 'paid_amount': 0.0}
+                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': o.tailor.code, 'tailor_name': o.tailor.name, 'shop_amount': 0.0, 'shop_qty': 0, 'order_amount': 0.0, 'order_qty': 0, 'paid_amount': 0.0}
             by_tailor[tid]['order_amount'] += float(o.amount)
+            by_tailor[tid]['order_qty'] += o.quantity
 
         for p in pay_qs:
             tid = p.tailor.id

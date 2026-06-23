@@ -11,9 +11,9 @@ export default function RateSheetPage() {
     const [form, setForm] = useState({ md_no: '', tailor: '', rate: '', work_type: 'regular', notes: '' })
 
     const fetchData = async () => {
-        const [rsRes, tailorRes] = await Promise.all([getRateSheets(), getTailors()])
+        const [rsRes, tailorRes] = await Promise.all([getRateSheets(), getTailors({ page_size: 1000 })])
         setRatesheets(rsRes.data)
-        setTailors(tailorRes.data)
+        setTailors(tailorRes.data.results)
     }
 
     useEffect(() => { fetchData() }, [])

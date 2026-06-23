@@ -60,8 +60,9 @@ export interface Summary {
 
 export default api
 
-export const getTailors = () => api.get<Tailor[]>('/tailors/')
+export const getTailors = (params?: object) => api.get<Paginated<Tailor>>('/tailors/', { params })
 export const createTailor = (data: object) => api.post<Tailor>('/tailors/', data)
+export const updateTailor = (id: number, data: object) => api.put<Tailor>(`/tailors/${id}/`, data)
 export const getInvoices = (params?: object) => api.get<Invoice[]>('/invoices/', { params })
 export const getSummary = (params?: object) => api.get<Summary>('/invoices/summary/', { params })
 
@@ -193,7 +194,9 @@ export interface TailorJobSummary {
   tailor_code: string
   tailor_name: string
   shop_amount: number
+  shop_qty: number
   order_amount: number
+  order_qty: number
   total_amount: number
   paid_amount: number
   balance: number

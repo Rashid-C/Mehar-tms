@@ -24,13 +24,13 @@ export default function Report() {
       const params: Record<string, string | number> = { month: selectedMonth }
       if (selectedTailor) params.tailor = selectedTailor
       const [invRes, sumRes, tailorRes, jobRes] = await Promise.all([
-        getInvoices(params), getSummary(params), getTailors(),
+        getInvoices(params), getSummary(params), getTailors({ page_size: 1000 }),
         getTailorJobSummary({ month: selectedMonth }),
       ])
       setInvoices(invRes.data)
       setTotalPieces(sumRes.data.total_pieces)
       setTotalAmount(sumRes.data.total_amount)
-      setTailors(tailorRes.data)
+      setTailors(tailorRes.data.results)
       setJobSummary(selectedTailor ? jobRes.data.filter(r => r.tailor_code === selectedTailor) : jobRes.data)
     } finally { setLoading(false) }
   }, [selectedMonth, selectedTailor])

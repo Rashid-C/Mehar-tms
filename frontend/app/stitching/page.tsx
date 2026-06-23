@@ -26,11 +26,11 @@ export default function StitchingPage() {
     const [recRes, sumRes, tailorRes] = await Promise.all([
       getStitchings(params),
       getStitchingSummary(params),
-      getTailors(),
+      getTailors({ page_size: 1000 }),
     ])
     setRecords(recRes.data)
     setSummary(sumRes.data)
-    setTailors(tailorRes.data)
+    setTailors(tailorRes.data.results)
   }
 
   useEffect(() => { fetchData() }, [filterMonth, filterTailor])

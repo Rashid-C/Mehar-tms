@@ -8,7 +8,6 @@ import {
   getTailorJobSummary, TailorJobSummary,
   lookupRateSheet,
 } from '@/lib/api'
-import PageHeader from '@/components/ui/PageHeader'
 
 type JobType = 'shop' | 'order' | 'payment'
 const today = () => new Date().toISOString().slice(0, 10)
@@ -105,7 +104,7 @@ export default function JobInvoicePage() {
   }, [])
 
   useEffect(() => {
-    getTailors().then(r => setTailors(r.data))
+    getTailors({ page_size: 1000 }).then(r => setTailors(r.data.results))
     getNextInvNo().then(r => setShopInvNo(r.data.next_inv_no))
     getNextOrderInvNo().then(r => setOrderInvNo(r.data.next_inv_no))
     loadSummary()
@@ -368,18 +367,18 @@ export default function JobInvoicePage() {
   // ── Re-usable action buttons per table row ─────────────────────────
   const rowActions = ({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) => (
     <div className="flex gap-1.5">
-      <button onClick={onEdit} className="text-[11px] px-2 py-1 rounded transition-all"
-        style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: '#2563eb', cursor: 'pointer' }}>✎</button>
-      <button onClick={onDelete} className="text-[11px] px-2 py-1 rounded transition-all"
-        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', cursor: 'pointer' }}>×</button>
+      <button onClick={() => { onEdit(); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+        className="text-[11px] px-2.5 py-1 rounded font-semibold transition-all"
+        style={{ background: 'rgba(37,99,235,0.1)', border: '1px solid rgba(37,99,235,0.3)', color: '#2563eb', cursor: 'pointer', whiteSpace: 'nowrap' }}>Edit</button>
+      <button onClick={onDelete}
+        className="text-[11px] px-2.5 py-1 rounded font-semibold transition-all"
+        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', cursor: 'pointer', whiteSpace: 'nowrap' }}>Del</button>
     </div>
   )
 
   return (
     <main className="min-h-screen p-4 sm:p-6 lg:p-8" style={{ background: '#f0f6ff' }}>
       <div className="max-w-7xl mx-auto">
-        <PageHeader title="Shop Entry" subtitle="SHOP · ORDER · PAYMENT" />
-
         {success && (
           <div className="mb-5 px-4 py-3 rounded-xl text-sm font-semibold"
             style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', color: '#16a34a' }}>
@@ -413,46 +412,34 @@ export default function JobInvoicePage() {
         {/* ══════════ SHOP TAB ══════════ */}
         {activeJob === 'shop' && (
           <>
-          {/* ── Search + daily summary — full width above the split ── */}
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>RECORDS</span>
-            <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(37,99,235,0.08)', color: '#2563eb' }}>{shopTotal}</span>
-            <input className="field flex-1 text-xs" style={{ padding: '8px 12px' }}
-              placeholder="Search by INV NO, MODEL, DATE, TAILOR…"
-              value={shopSearchInput} onChange={e => handleShopSearchChange(e.target.value)}
-              disabled={!!shopDayFilter} />
-          </div>
+          {/* ── Search + daily summary — single line ── */}
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
             style={{ background: 'rgba(37,99,235,0.04)', border: '1.5px solid rgba(37,99,235,0.12)' }}>
-            <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#93c5fd', letterSpacing: '2px' }}>DAILY SUMMARY</span>
+            <span className="text-[11px] px-2 py-0.5 rounded font-bold shrink-0" style={{ background: 'rgba(37,99,235,0.08)', color: '#2563eb' }}>{shopTotal}</span>
+            <input className="field text-xs" style={{ padding: '7px 12px', flex: '1 1 160px', minWidth: 0 }}
+              placeholder="Search INV NO, MODEL, DATE, TAILOR…"
+              value={shopSearchInput} onChange={e => handleShopSearchChange(e.target.value)}
+              disabled={!!shopDayFilter} />
             <input type="date" value={shopDayFilter} onChange={e => handleShopDayFilter(e.target.value)}
-              className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
+              className="field" style={{ width: 'auto', padding: '7px 12px', fontSize: '12px', flex: '0 0 auto' }} />
             {shopDayFilter && shopRecords.length > 0 && (
               <>
                 <div style={{ width: 1, height: 24, background: 'rgba(37,99,235,0.2)', flexShrink: 0 }} />
-                <div className="flex gap-5 flex-1">
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#93c5fd' }}>PIECES</p>
-                    <p className="text-base font-bold" style={{ color: '#2563eb' }}>{shopRecords.reduce((s, ji) => s + ji.pc_count, 0)} pc</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#93c5fd' }}>AMOUNT</p>
-                    <p className="text-base font-bold" style={{ color: '#16a34a' }}>AED {shopRecords.reduce((s, ji) => s + parseFloat(String(ji.amount)), 0).toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#93c5fd' }}>ENTRIES</p>
-                    <p className="text-base font-bold" style={{ color: '#1e293b' }}>{shopTotal}</p>
-                  </div>
-                </div>
+                <span className="text-xs font-bold shrink-0" style={{ color: '#2563eb' }}>
+                  {shopRecords.reduce((s, ji) => s + ji.pc_count, 0)} pc
+                </span>
+                <span className="text-xs font-bold shrink-0" style={{ color: '#16a34a' }}>
+                  AED {shopRecords.reduce((s, ji) => s + parseFloat(String(ji.amount)), 0).toFixed(2)}
+                </span>
                 <button onClick={() => handleShopDayFilter('')}
                   className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
                   style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: '#2563eb', cursor: 'pointer' }}>
-                  ✕ Clear
+                  ✕
                 </button>
               </>
             )}
             {shopDayFilter && shopRecords.length === 0 && (
-              <span className="text-xs" style={{ color: '#d1d5db' }}>No records for this date</span>
+              <span className="text-xs shrink-0" style={{ color: '#d1d5db' }}>No records</span>
             )}
           </div>
 
@@ -462,23 +449,21 @@ export default function JobInvoicePage() {
             {/* ── Left: Form (30%) ── */}
             <div style={{ width: '30%', flexShrink: 0 }}>
               <div className="card" style={{ position: 'sticky', top: '88px', overflow: 'hidden' }}>
-                <div className="flex items-center justify-between px-5 py-4"
-                  style={{ background: 'rgba(37,99,235,0.04)', borderBottom: '1.5px solid rgba(37,99,235,0.08)' }}>
-                  <div className="flex items-center gap-2">
-                    <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', borderRadius: '50%' }} />
-                    <span className="text-[11px] font-bold tracking-widest" style={{ color: '#2563eb', letterSpacing: '2px' }}>
-                      {isEditingShop ? `EDITING — ${shopInvNo}` : 'NEW SHOP ENTRY'}
-                    </span>
-                  </div>
-                  {isEditingShop && (
-                    <button type="button" onClick={resetShopForm}
-                      className="text-xs px-3 py-1.5 rounded-lg"
-                      style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer' }}>
-                      ✕ Cancel
-                    </button>
-                  )}
-                </div>
                 <form onSubmit={handleShopSubmit} className="flex flex-col gap-4 p-5">
+                  <div className="flex items-center gap-2 -mt-1 mb-1">
+                    <button type="submit" disabled={saving || !!shopModelErr}
+                      className="flex-1 text-xs font-bold py-2 rounded-xl transition-all"
+                      style={{ background: saving || !!shopModelErr ? 'rgba(37,99,235,0.15)' : 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: saving || !!shopModelErr ? '#9ca3af' : '#fff', border: 'none', cursor: saving || !!shopModelErr ? 'not-allowed' : 'pointer', boxShadow: saving || !!shopModelErr ? 'none' : '0 3px 10px rgba(37,99,235,0.3)' }}>
+                      {saving ? 'Saving…' : isEditingShop ? 'Update Entry' : 'Save Entry'}
+                    </button>
+                    {isEditingShop && (
+                      <button type="button" onClick={resetShopForm}
+                        className="text-xs px-3 py-2 rounded-xl font-semibold"
+                        style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        ✕
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>INVOICE NO</label>
@@ -542,9 +527,6 @@ export default function JobInvoicePage() {
                     <input className="field" value={shopRemarks} onChange={e => setShopRemarks(e.target.value)}
                       placeholder="e.g. urgent, special stitch…" />
                   </div>
-                  <button type="submit" disabled={saving || !!shopModelErr} className="btn-gold w-full">
-                    {saving ? 'Saving…' : isEditingShop ? 'Update Entry' : 'Save Entry'}
-                  </button>
                 </form>
               </div>
             </div>
@@ -562,11 +544,11 @@ export default function JobInvoicePage() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(37,99,235,0.15)', boxShadow: '0 1px 4px rgba(37,99,235,0.06)' }}>
-                    <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
+                  <div className="rounded-2xl overflow-x-auto" style={{ border: '1px solid rgba(37,99,235,0.15)', boxShadow: '0 1px 4px rgba(37,99,235,0.06)' }}>
+                    <table className="w-full text-xs" style={{ borderCollapse: 'collapse', minWidth: '700px' }}>
                       <thead>
                         <tr style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe' }}>
-                          {['INV NO', 'MODEL', 'DATE', 'PC', 'RATE', 'AMOUNT', 'TAILOR', ''].map(h => (
+                          {['INV NO', 'MODEL', 'DATE', 'PC', 'RATE', 'AMOUNT', 'TAILOR', 'REMARKS', ''].map(h => (
                             <th key={h} className="text-left px-3 py-3 font-semibold"
                               style={{ color: '#2563eb', letterSpacing: '1.5px' }}>{h}</th>
                           ))}
@@ -588,6 +570,7 @@ export default function JobInvoicePage() {
                               </span>
                               <span className="ml-1.5" style={{ color: '#64748b' }}>{ji.tailor_name}</span>
                             </td>
+                            <td className="px-3 py-2.5" style={{ color: '#94a3b8' }}>{ji.remarks || '—'}</td>
                             <td className="px-3 py-2.5">
                               {rowActions({ onEdit: () => openEditShop(ji), onDelete: () => handleDeleteShop(ji.id) })}
                             </td>
@@ -604,7 +587,7 @@ export default function JobInvoicePage() {
                           <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>
                             AED {shopRecords.reduce((s, ji) => s + parseFloat(String(ji.amount)), 0).toFixed(2)}
                           </td>
-                          <td colSpan={2} />
+                          <td colSpan={3} />
                         </tr>
                       </tfoot>
                     </table>
@@ -727,13 +710,6 @@ export default function JobInvoicePage() {
                         onChange={e => setOrderAmount(e.target.value)} placeholder="0.00" required />
                     </div>
                   </div>
-                  {orderQty && orderAmount && !isNaN(+orderQty) && !isNaN(+orderAmount) && +orderQty > 0 && +orderAmount > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 rounded-xl"
-                      style={{ background: 'rgba(8,145,178,0.05)', border: '1px solid rgba(8,145,178,0.2)' }}>
-                      <span className="text-xs tracking-widest" style={{ color: '#94a3b8' }}>TOTAL</span>
-                      <span className="font-bold text-base" style={{ color: '#0891b2' }}>AED {(+orderQty * +orderAmount).toFixed(2)}</span>
-                    </div>
-                  )}
                   <button type="submit" disabled={saving}
                     className="w-full py-3 rounded-full font-bold text-sm"
                     style={{ background: 'linear-gradient(135deg,#0891b2,#0e7490)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(8,145,178,0.3)' }}>
@@ -896,11 +872,11 @@ export default function JobInvoicePage() {
                       <div className="rounded-xl px-4 py-3 flex flex-col gap-1.5"
                         style={{ background: '#f8faff', border: '1px solid #e2e8f0' }}>
                         <div className="flex justify-between text-xs">
-                          <span style={{ color: '#94a3b8' }}>Shop</span>
+                          <span style={{ color: '#94a3b8' }}>Shop <span style={{ fontWeight: 700, color: '#475569' }}>({s.shop_qty} pc)</span></span>
                           <span style={{ color: '#2563eb' }}>AED {s.shop_amount.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-xs">
-                          <span style={{ color: '#94a3b8' }}>Order</span>
+                          <span style={{ color: '#94a3b8' }}>Order <span style={{ fontWeight: 700, color: '#475569' }}>({s.order_qty} qty)</span></span>
                           <span style={{ color: '#0891b2' }}>AED {s.order_amount.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-xs" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>
@@ -929,7 +905,7 @@ export default function JobInvoicePage() {
                       if (!s) return null
                       const remaining = s.balance - parseFloat(payAmount)
                       return (
-                        <p className="text-[11px] mt-1.5 font-semibold"
+                        <p className="text-[11px] mt-1.5 font-semibold text-right"
                           style={{ color: remaining >= 0 ? '#16a34a' : '#dc2626' }}>
                           {remaining >= 0
                             ? `Balance after payment: AED ${remaining.toFixed(2)}`
@@ -945,11 +921,35 @@ export default function JobInvoicePage() {
                     <input className="field" value={payRemarks} onChange={e => setPayRemarks(e.target.value)} placeholder="e.g. advance, full payment…" />
                   </div>
 
-                  <button type="submit" disabled={saving}
-                    className="w-full py-3 rounded-full font-bold text-sm"
-                    style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(22,163,74,0.3)' }}>
-                    {saving ? 'Saving…' : isEditingPay ? 'Update Payment' : 'Release Payment'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={saving}
+                      className="flex-1 py-2.5 rounded-xl font-bold text-sm"
+                      style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(22,163,74,0.3)' }}>
+                      {saving ? 'Saving…' : isEditingPay ? 'Update Payment' : 'Release Payment'}
+                    </button>
+                    {(() => {
+                      const tailor = tailors.find(t => t.id === Number(payTailor))
+                      const phone = tailor?.phone?.replace(/\D/g, '')
+                      const s = tailorSummary.find(x => x.tailor_id === Number(payTailor))
+                      const msg = encodeURIComponent(`Payment of AED ${payAmount || '—'} released to ${tailor?.name || ''} on ${payDate}${payRemarks ? ` (${payRemarks})` : ''}. Pending balance: AED ${s ? (s.balance - parseFloat(payAmount || '0')).toFixed(2) : '—'}.`)
+                      return phone ? (
+                        <a href={`https://wa.me/${phone}?text=${msg}`} target="_blank" rel="noreferrer"
+                          title="Send via WhatsApp"
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 12, background: '#dcfce7', border: '1.5px solid #86efac', cursor: 'pointer', textDecoration: 'none', flexShrink: 0 }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#16a34a">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                          </svg>
+                        </a>
+                      ) : (
+                        <span title={payTailor ? 'No phone saved for this tailor' : 'Select a tailor first'}
+                          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 42, height: 42, borderRadius: 12, background: '#f1f5f9', border: '1.5px solid #e2e8f0', flexShrink: 0, opacity: 0.45 }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#94a3b8">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                          </svg>
+                        </span>
+                      )
+                    })()}
+                  </div>
                 </form>
               </div>
             </div>
