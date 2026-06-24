@@ -260,20 +260,19 @@ export default function JobInvoicePage() {
   const openEditOrder = (o: TailorOrder) => {
     setOrderInvNo(o.inv_no); setOrderTailor(o.tailor); setOrderDate(o.date)
     setOrderQty(String(o.quantity))
-    const rate = o.quantity > 0 ? (parseFloat(String(o.amount)) / o.quantity).toFixed(2) : String(o.amount)
-    setOrderAmount(rate); setOrderRemarks(o.remarks || '')
+    setOrderAmount(String(o.amount)); setOrderRemarks(o.remarks || '')
     setIsEditingOrder(true); setEditOrderId(o.id)
   }
 
   const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!orderTailor) { fail('Please select a tailor'); return }
-    const total = parseFloat(orderAmount) * parseInt(orderQty)
+    const amount = parseFloat(orderAmount)
     setSaving(true)
     try {
-      const payload = { inv_no: orderInvNo, tailor: orderTailor, date: orderDate, quantity: parseInt(orderQty), amount: total, remarks: orderRemarks }
+      const payload = { inv_no: orderInvNo, tailor: orderTailor, date: orderDate, quantity: parseInt(orderQty), amount, remarks: orderRemarks }
       if (isEditingOrder && editOrderId) { await updateTailorOrder(editOrderId, payload); notify('Order updated') }
-      else { await createTailorOrder(payload); notify(`${orderInvNo} saved — AED ${total.toFixed(2)}`) }
+      else { await createTailorOrder(payload); notify(`${orderInvNo} saved — AED ${amount.toFixed(2)}`) }
       await resetOrderForm(); await loadOrders()
     } catch { fail('Failed to save order') } finally { setSaving(false) }
   }
@@ -727,7 +726,7 @@ export default function JobInvoicePage() {
                         onChange={e => setOrderQty(e.target.value)} placeholder="0" required />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>RATE (AED)</label>
+                      <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>AMOUNT (AED)</label>
                       <input type="number" min="0" step="0.01" className="field" value={orderAmount}
                         onChange={e => setOrderAmount(e.target.value)} placeholder="0.00" required />
                     </div>
