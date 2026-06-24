@@ -59,6 +59,7 @@ export default function JobInvoicePage() {
   const [orderDate, setOrderDate] = useState(today())
   const [orderQty, setOrderQty] = useState('')
   const [orderAmount, setOrderAmount] = useState('')
+  const [orderRemarks, setOrderRemarks] = useState('')
 
   // ── PAYMENT ───────────────────────────────────────────────────────────
   const [payRecords, setPayRecords] = useState<Payment[]>([])
@@ -70,11 +71,16 @@ export default function JobInvoicePage() {
   const [payAmount, setPayAmount] = useState('')
   const [payRemarks, setPayRemarks] = useState('')
   const [tailorSummary, setTailorSummary] = useState<TailorJobSummary[]>([])
+  const [daySummary, setDaySummary] = useState<TailorJobSummary[]>([])
 
   // ── Daily filters ─────────────────────────────────────────────────────
   const [shopDayFilter, setShopDayFilter] = useState('')
   const [orderDayFilter, setOrderDayFilter] = useState('')
   const [payDayFilter, setPayDayFilter] = useState('')
+
+  // ── Search ────────────────────────────────────────────────────────────
+  const [orderSearch, setOrderSearch] = useState('')
+  const [paySearch, setPaySearch] = useState('')
 
   // ── Loaders ───────────────────────────────────────────────────────────
   const loadShop = useCallback(async (p = shopPage, q = shopSearch) => {
@@ -113,6 +119,14 @@ export default function JobInvoicePage() {
   useEffect(() => { loadShop() }, [loadShop])
   useEffect(() => { loadOrders() }, [loadOrders])
   useEffect(() => { loadPays() }, [loadPays])
+
+  useEffect(() => {
+    if (payDayFilter) {
+      getTailorJobSummary({ date: payDayFilter }).then(r => setDaySummary(r.data))
+    } else {
+      setDaySummary([])
+    }
+  }, [payDayFilter])
 
   // ── Helpers ───────────────────────────────────────────────────────────
   const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3500) }
@@ -238,7 +252,7 @@ export default function JobInvoicePage() {
 
   // ── ORDER handlers ────────────────────────────────────────────────────
   const resetOrderForm = async () => {
-    setOrderTailor(''); setOrderDate(today()); setOrderQty(''); setOrderAmount('')
+    setOrderTailor(''); setOrderDate(today()); setOrderQty(''); setOrderAmount(''); setOrderRemarks('')
     setIsEditingOrder(false); setEditOrderId(null)
     const r = await getNextOrderInvNo(); setOrderInvNo(r.data.next_inv_no)
   }
@@ -247,7 +261,7 @@ export default function JobInvoicePage() {
     setOrderInvNo(o.inv_no); setOrderTailor(o.tailor); setOrderDate(o.date)
     setOrderQty(String(o.quantity))
     const rate = o.quantity > 0 ? (parseFloat(String(o.amount)) / o.quantity).toFixed(2) : String(o.amount)
-    setOrderAmount(rate)
+    setOrderAmount(rate); setOrderRemarks(o.remarks || '')
     setIsEditingOrder(true); setEditOrderId(o.id)
   }
 
@@ -257,7 +271,7 @@ export default function JobInvoicePage() {
     const total = parseFloat(orderAmount) * parseInt(orderQty)
     setSaving(true)
     try {
-      const payload = { inv_no: orderInvNo, tailor: orderTailor, date: orderDate, quantity: parseInt(orderQty), amount: total }
+      const payload = { inv_no: orderInvNo, tailor: orderTailor, date: orderDate, quantity: parseInt(orderQty), amount: total, remarks: orderRemarks }
       if (isEditingOrder && editOrderId) { await updateTailorOrder(editOrderId, payload); notify('Order updated') }
       else { await createTailorOrder(payload); notify(`${orderInvNo} saved — AED ${total.toFixed(2)}`) }
       await resetOrderForm(); await loadOrders()
@@ -299,8 +313,24 @@ export default function JobInvoicePage() {
 
   // ── Derived ───────────────────────────────────────────────────────────
   const shopTotalPages = Math.ceil(shopTotal / PAGE_SIZE) || 1
-  const filteredOrders = orderDayFilter ? orderRecords.filter(o => o.date === orderDayFilter) : orderRecords
-  const filteredPays   = payDayFilter   ? payRecords.filter(p => p.date === payDayFilter)     : payRecords
+  const filteredOrders = orderRecords.filter(o => {
+    if (orderDayFilter && o.date !== orderDayFilter) return false
+    if (orderSearch) {
+      const q = orderSearch.toLowerCase()
+      return o.inv_no?.toLowerCase().includes(q) || o.tailor_code.toLowerCase().includes(q) ||
+             o.tailor_name.toLowerCase().includes(q) || o.date.includes(q) || (o.remarks || '').toLowerCase().includes(q)
+    }
+    return true
+  })
+  const filteredPays = payRecords.filter(p => {
+    if (payDayFilter && p.date !== payDayFilter) return false
+    if (paySearch) {
+      const q = paySearch.toLowerCase()
+      return p.tailor_code.toLowerCase().includes(q) || p.tailor_name.toLowerCase().includes(q) ||
+             p.date.includes(q) || (p.remarks || '').toLowerCase().includes(q)
+    }
+    return true
+  })
 
   const jobs = [
     { id: 'shop'    as JobType, num: 1, label: 'Shop',    color: '#2563eb', rgb: '37,99,235'   },
@@ -625,42 +655,34 @@ export default function JobInvoicePage() {
         {/* ══════════ ORDER TAB ══════════ */}
         {activeJob === 'order' && (
           <>
-          {/* Daily summary — full width */}
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>RECORDS</span>
-            <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(8,145,178,0.08)', color: '#0891b2' }}>{orderRecords.length}</span>
-          </div>
+          {/* Search + daily summary — single line */}
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
             style={{ background: 'rgba(8,145,178,0.04)', border: '1.5px solid rgba(8,145,178,0.12)' }}>
-            <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#67e8f9', letterSpacing: '2px' }}>DAILY SUMMARY</span>
-            <input type="date" value={orderDayFilter} onChange={e => setOrderDayFilter(e.target.value)}
-              className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
+            <span className="text-[11px] px-2 py-0.5 rounded font-bold shrink-0" style={{ background: 'rgba(8,145,178,0.08)', color: '#0891b2' }}>{filteredOrders.length}</span>
+            <input className="field text-xs" style={{ padding: '7px 12px', flex: '1 1 160px', minWidth: 0 }}
+              placeholder="Search INV NO, TAILOR, DATE, REMARKS…"
+              value={orderSearch} onChange={e => setOrderSearch(e.target.value)}
+              disabled={!!orderDayFilter} />
+            <input type="date" value={orderDayFilter} onChange={e => { setOrderDayFilter(e.target.value); setOrderSearch('') }}
+              className="field" style={{ width: 'auto', padding: '7px 12px', fontSize: '12px', flex: '0 0 auto' }} />
             {orderDayFilter && filteredOrders.length > 0 && (
               <>
                 <div style={{ width: 1, height: 24, background: 'rgba(8,145,178,0.25)', flexShrink: 0 }} />
-                <div className="flex gap-5 flex-1">
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#67e8f9' }}>QUANTITY</p>
-                    <p className="text-base font-bold" style={{ color: '#0891b2' }}>{filteredOrders.reduce((s, o) => s + o.quantity, 0)} qty</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#67e8f9' }}>AMOUNT</p>
-                    <p className="text-base font-bold" style={{ color: '#16a34a' }}>AED {filteredOrders.reduce((s, o) => s + parseFloat(String(o.amount)), 0).toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#67e8f9' }}>ENTRIES</p>
-                    <p className="text-base font-bold" style={{ color: '#1e293b' }}>{filteredOrders.length}</p>
-                  </div>
-                </div>
+                <span className="text-xs font-bold shrink-0" style={{ color: '#0891b2' }}>
+                  {filteredOrders.reduce((s, o) => s + o.quantity, 0)} qty
+                </span>
+                <span className="text-xs font-bold shrink-0" style={{ color: '#16a34a' }}>
+                  AED {filteredOrders.reduce((s, o) => s + parseFloat(String(o.amount)), 0).toFixed(2)}
+                </span>
                 <button onClick={() => setOrderDayFilter('')}
                   className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
                   style={{ background: 'rgba(8,145,178,0.08)', border: '1px solid rgba(8,145,178,0.2)', color: '#0891b2', cursor: 'pointer' }}>
-                  ✕ Clear
+                  ✕
                 </button>
               </>
             )}
             {orderDayFilter && filteredOrders.length === 0 && (
-              <span className="text-xs" style={{ color: '#d1d5db' }}>No records for this date</span>
+              <span className="text-xs shrink-0" style={{ color: '#d1d5db' }}>No records</span>
             )}
           </div>
 
@@ -710,8 +732,15 @@ export default function JobInvoicePage() {
                         onChange={e => setOrderAmount(e.target.value)} placeholder="0.00" required />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold tracking-widest mb-2" style={lbl}>
+                      REMARKS <span style={{ color: '#cbd5e1', fontWeight: 400 }}>(optional)</span>
+                    </label>
+                    <input className="field" value={orderRemarks} onChange={e => setOrderRemarks(e.target.value)}
+                      placeholder="e.g. urgent, special order…" />
+                  </div>
                   <button type="submit" disabled={saving}
-                    className="w-full py-3 rounded-full font-bold text-sm"
+                    className="w-full py-2.5 rounded-xl font-bold text-sm"
                     style={{ background: 'linear-gradient(135deg,#0891b2,#0e7490)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(8,145,178,0.3)' }}>
                     {saving ? 'Saving…' : isEditingOrder ? 'Update Order' : 'Save Order'}
                   </button>
@@ -735,7 +764,7 @@ export default function JobInvoicePage() {
                   <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: '#ecfeff', borderBottom: '1px solid #cffafe' }}>
-                        {['INV NO', 'DATE', 'TAILOR', 'QTY', 'AMOUNT', ''].map(h => (
+                        {['INV NO', 'DATE', 'TAILOR', 'QTY', 'AMOUNT', 'REMARKS', ''].map(h => (
                           <th key={h} className="text-left px-3 py-3 font-semibold"
                             style={{ color: '#0891b2', letterSpacing: '1.5px' }}>{h}</th>
                         ))}
@@ -755,6 +784,7 @@ export default function JobInvoicePage() {
                           </td>
                           <td className="px-3 py-2.5" style={{ color: '#475569' }}>{o.quantity}</td>
                           <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>AED {o.amount}</td>
+                          <td className="px-3 py-2.5" style={{ color: '#94a3b8' }}>{o.remarks || '—'}</td>
                           <td className="px-3 py-2.5">
                             {rowActions({ onEdit: () => openEditOrder(o), onDelete: () => handleDeleteOrder(o.id) })}
                           </td>
@@ -767,7 +797,7 @@ export default function JobInvoicePage() {
                         <td className="px-3 py-2.5" />
                         <td className="px-3 py-2.5 font-bold" style={{ color: '#0891b2' }}>{filteredOrders.reduce((s, o) => s + o.quantity, 0)} qty</td>
                         <td className="px-3 py-2.5 font-bold" style={{ color: '#16a34a' }}>AED {filteredOrders.reduce((s, o) => s + parseFloat(String(o.amount)), 0).toFixed(2)}</td>
-                        <td />
+                        <td /><td />
                       </tr>
                     </tfoot>
                   </table>
@@ -781,40 +811,112 @@ export default function JobInvoicePage() {
         {/* ══════════ PAYMENT TAB ══════════ */}
         {activeJob === 'payment' && (
           <>
-          {/* Daily summary — full width */}
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-[11px] font-bold tracking-widest shrink-0" style={{ color: '#94a3b8', letterSpacing: '2px' }}>RECORDS</span>
-            <span className="text-[11px] px-2 py-0.5 rounded font-bold" style={{ background: 'rgba(22,163,74,0.08)', color: '#16a34a' }}>{payRecords.length}</span>
-          </div>
+          {/* Search + daily summary — single line */}
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 rounded-2xl mb-4"
             style={{ background: 'rgba(22,163,74,0.04)', border: '1.5px solid rgba(22,163,74,0.12)' }}>
-            <span className="text-[10px] font-bold tracking-widest shrink-0" style={{ color: '#86efac', letterSpacing: '2px' }}>DAILY SUMMARY</span>
-            <input type="date" value={payDayFilter} onChange={e => setPayDayFilter(e.target.value)}
-              className="field" style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', flex: '0 0 auto' }} />
+            <span className="text-[11px] px-2 py-0.5 rounded font-bold shrink-0" style={{ background: 'rgba(22,163,74,0.08)', color: '#16a34a' }}>{filteredPays.length}</span>
+            <input className="field text-xs" style={{ padding: '7px 12px', flex: '1 1 160px', minWidth: 0 }}
+              placeholder="Search TAILOR, DATE, REMARKS…"
+              value={paySearch} onChange={e => setPaySearch(e.target.value)}
+              disabled={!!payDayFilter} />
+            <input type="date" value={payDayFilter} onChange={e => { setPayDayFilter(e.target.value); setPaySearch('') }}
+              className="field" style={{ width: 'auto', padding: '7px 12px', fontSize: '12px', flex: '0 0 auto' }} />
             {payDayFilter && filteredPays.length > 0 && (
               <>
                 <div style={{ width: 1, height: 24, background: 'rgba(22,163,74,0.25)', flexShrink: 0 }} />
-                <div className="flex gap-5 flex-1">
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#86efac' }}>PAYMENTS</p>
-                    <p className="text-base font-bold" style={{ color: '#1e293b' }}>{filteredPays.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold tracking-widest mb-0.5" style={{ color: '#86efac' }}>TOTAL PAID</p>
-                    <p className="text-base font-bold" style={{ color: '#16a34a' }}>AED {filteredPays.reduce((s, p) => s + parseFloat(String(p.amount)), 0).toFixed(2)}</p>
-                  </div>
-                </div>
+                <span className="text-xs font-bold shrink-0" style={{ color: '#16a34a' }}>
+                  AED {filteredPays.reduce((s, p) => s + parseFloat(String(p.amount)), 0).toFixed(2)}
+                </span>
                 <button onClick={() => setPayDayFilter('')}
                   className="text-[11px] font-semibold px-3 py-1.5 rounded-lg shrink-0"
                   style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.2)', color: '#16a34a', cursor: 'pointer' }}>
-                  ✕ Clear
+                  ✕
                 </button>
               </>
             )}
             {payDayFilter && filteredPays.length === 0 && (
-              <span className="text-xs" style={{ color: '#d1d5db' }}>No payments for this date</span>
+              <span className="text-xs shrink-0" style={{ color: '#d1d5db' }}>No payments</span>
             )}
           </div>
+
+          {/* Day Balance Summary */}
+          {payDayFilter && daySummary.length > 0 && (() => {
+            const active = daySummary.filter(s => s.balance !== 0 || (s.opening_balance ?? 0) !== 0 || (s.closing_balance ?? 0) !== 0)
+            if (!active.length) return null
+            return (
+              <div className="card overflow-hidden mb-4">
+                <div className="flex items-center gap-3 px-4 py-3"
+                  style={{ background: 'rgba(22,163,74,0.04)', borderBottom: '1.5px solid rgba(22,163,74,0.10)' }}>
+                  <div style={{ width: 7, height: 7, background: 'linear-gradient(135deg,#16a34a,#15803d)', borderRadius: '50%' }} />
+                  <span className="text-[11px] font-bold tracking-widest" style={{ color: '#16a34a', letterSpacing: '2px' }}>
+                    BALANCE SUMMARY — {payDayFilter}
+                  </span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(22,163,74,0.04)', borderBottom: '1px solid rgba(22,163,74,0.10)' }}>
+                        {['TAILOR', 'OPENING', 'CLOSING', 'OUTSTANDING'].map(h => (
+                          <th key={h} className="px-4 py-2.5 text-left text-[10px] font-bold tracking-widest"
+                            style={{ color: '#94a3b8', letterSpacing: '1.5px' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {active.map((s, i) => {
+                        const opening = s.opening_balance ?? 0
+                        const closing = s.closing_balance ?? 0
+                        const diff = closing - opening
+                        return (
+                          <tr key={s.tailor_id}
+                            style={{ borderBottom: '1px solid rgba(22,163,74,0.06)', background: i % 2 === 0 ? '#fff' : '#fafff8' }}>
+                            <td className="px-4 py-2.5">
+                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                                style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.18)', color: '#15803d' }}>
+                                {s.tailor_code}
+                              </span>
+                              <span className="text-xs ml-2" style={{ color: '#64748b' }}>{s.tailor_name}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs font-medium" style={{ color: opening > 0 ? '#2563eb' : opening < 0 ? '#dc2626' : '#94a3b8' }}>
+                              AED {opening.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className="text-xs font-bold" style={{ color: closing > 0 ? '#16a34a' : closing < 0 ? '#dc2626' : '#94a3b8' }}>
+                                AED {closing.toFixed(2)}
+                              </span>
+                              {diff !== 0 && (
+                                <span className="text-[10px] ml-1.5 px-1.5 py-0.5 rounded font-semibold"
+                                  style={{ background: diff < 0 ? 'rgba(22,163,74,0.08)' : 'rgba(239,68,68,0.07)', color: diff < 0 ? '#16a34a' : '#dc2626' }}>
+                                  {diff < 0 ? '▼' : '▲'} {Math.abs(diff).toFixed(0)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 text-xs font-bold" style={{ color: s.balance > 0 ? '#1e293b' : '#dc2626' }}>
+                              AED {s.balance.toFixed(2)}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ borderTop: '1.5px solid rgba(22,163,74,0.15)', background: 'rgba(22,163,74,0.03)' }}>
+                        <td className="px-4 py-2.5 text-[11px] font-bold" style={{ color: '#16a34a' }}>TOTAL</td>
+                        <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#2563eb' }}>
+                          AED {active.reduce((acc, x) => acc + (x.opening_balance ?? 0), 0).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#16a34a' }}>
+                          AED {active.reduce((acc, x) => acc + (x.closing_balance ?? 0), 0).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-bold" style={{ color: '#1e293b' }}>
+                          AED {active.reduce((acc, x) => acc + x.balance, 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* 30/70 split */}
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>

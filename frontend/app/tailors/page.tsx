@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getTailors, createTailor, updateTailor, Tailor } from '@/lib/api'
+import { getTailors, createTailor, updateTailor, deleteTailor, Tailor } from '@/lib/api'
 
 const PAGE_SIZE = 10
 const lbl = { color: '#64748b', fontSize: '10px', letterSpacing: '1.5px', display: 'block', marginBottom: '6px', fontWeight: 700 } as React.CSSProperties
@@ -68,6 +68,19 @@ export default function TailorsPage() {
       if (data?.code) fail('Code already exists')
       else fail(data ? Object.values(data).flat().join(' | ') : 'Update failed')
     } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (t: Tailor) => {
+    if (!confirm(`Delete tailor "${t.code} — ${t.name}"? This cannot be undone.`)) return
+    try {
+      await deleteTailor(t.id)
+      notify(`Tailor "${t.code}" deleted`)
+      const newPage = tailors.length === 1 && page > 1 ? page - 1 : page
+      setPage(newPage)
+      load(newPage)
+    } catch {
+      fail('Cannot delete — tailor may have existing records')
+    }
   }
 
   return (
@@ -186,11 +199,18 @@ export default function TailorsPage() {
                           {t.phone && <p className="text-xs" style={{ color: '#9ca3af' }}>{t.phone}</p>}
                         </div>
                       </div>
-                      <button onClick={() => openEdit(t)}
-                        className="text-xs px-3 py-1.5 rounded-lg font-semibold"
-                        style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: '#2563eb', cursor: 'pointer' }}>
-                        Edit
-                      </button>
+                      <div className="flex gap-2">
+                        <button onClick={() => openEdit(t)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-semibold"
+                          style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: '#2563eb', cursor: 'pointer' }}>
+                          Edit
+                        </button>
+                        <button onClick={() => handleDelete(t)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-semibold"
+                          style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', cursor: 'pointer' }}>
+                          Del
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

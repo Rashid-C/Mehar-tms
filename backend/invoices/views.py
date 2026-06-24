@@ -219,7 +219,9 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def tailor_summary(self, request):
-        month = request.query_params.get('month')
+        from datetime import date as date_type
+        month    = request.query_params.get('month')
+        date_str = request.query_params.get('date')
 
         job_qs    = JobInvoice.objects.select_related('tailor').all()
         order_qs  = TailorOrder.objects.select_related('tailor').all()
@@ -256,6 +258,29 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
             data['total_amount'] = data['shop_amount'] + data['order_amount']
             data['balance'] = data['total_amount'] - data['paid_amount']
             result.append(data)
+
+        # Opening / closing balances for a specific date
+        if date_str:
+            try:
+                target = date_type.fromisoformat(date_str)
+            except ValueError:
+                return Response(sorted(result, key=lambda x: x['tailor_code']))
+
+            def _map(qs):
+                return {r['tailor_id']: float(r['total'] or 0) for r in qs}
+
+            sb = _map(JobInvoice.objects.filter(date__lt=target).values('tailor_id').annotate(total=Sum('amount')))
+            ob = _map(TailorOrder.objects.filter(date__lt=target).values('tailor_id').annotate(total=Sum('amount')))
+            pb = _map(Payment.objects.filter(date__lt=target).values('tailor_id').annotate(total=Sum('amount')))
+
+            sc = _map(JobInvoice.objects.filter(date__lte=target).values('tailor_id').annotate(total=Sum('amount')))
+            oc = _map(TailorOrder.objects.filter(date__lte=target).values('tailor_id').annotate(total=Sum('amount')))
+            pc = _map(Payment.objects.filter(date__lte=target).values('tailor_id').annotate(total=Sum('amount')))
+
+            for data in result:
+                tid = data['tailor_id']
+                data['opening_balance'] = (sb.get(tid, 0) + ob.get(tid, 0)) - pb.get(tid, 0)
+                data['closing_balance'] = (sc.get(tid, 0) + oc.get(tid, 0)) - pc.get(tid, 0)
 
         return Response(sorted(result, key=lambda x: x['tailor_code']))
 
