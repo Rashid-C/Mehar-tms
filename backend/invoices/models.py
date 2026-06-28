@@ -121,6 +121,21 @@ class TailorOrder(models.Model):
         ordering = ['-date', '-created_at']
 
 
+class MaterialIssue(models.Model):
+    tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='material_issues')
+    date = models.DateField()
+    description = models.CharField(max_length=200, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    remarks = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.date} | {self.tailor.code} | {self.amount}"
+
+    class Meta:
+        ordering = ['-date', '-created_at']
+
+
 class Payment(models.Model):
     job_invoice = models.ForeignKey(
         JobInvoice, on_delete=models.SET_NULL,

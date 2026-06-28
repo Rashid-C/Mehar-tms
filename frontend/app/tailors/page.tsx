@@ -3,21 +3,17 @@ import { useEffect, useState } from 'react'
 import { getTailors, createTailor, updateTailor, deleteTailor, Tailor } from '@/lib/api'
 
 const PAGE_SIZE = 10
-const lbl = { color: '#64748b', fontSize: '10px', letterSpacing: '1.5px', display: 'block', marginBottom: '6px', fontWeight: 700 } as React.CSSProperties
+const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 
 export default function TailorsPage() {
-  const [tailors, setTailors]   = useState<Tailor[]>([])
-  const [total, setTotal]       = useState(0)
-  const [page, setPage]         = useState(1)
-  const [saving, setSaving]     = useState(false)
-  const [error, setError]       = useState('')
-  const [success, setSuccess]   = useState('')
-
-  // Add form
-  const [form, setForm] = useState({ name: '', code: '', phone: '' })
-
-  // Edit state
-  const [editId, setEditId]     = useState<number | null>(null)
+  const [tailors, setTailors] = useState<Tailor[]>([])
+  const [total, setTotal]     = useState(0)
+  const [page, setPage]       = useState(1)
+  const [saving, setSaving]   = useState(false)
+  const [error, setError]     = useState('')
+  const [success, setSuccess] = useState('')
+  const [form, setForm]       = useState({ name: '', code: '', phone: '' })
+  const [editId, setEditId]   = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ name: '', code: '', phone: '' })
 
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1
@@ -31,7 +27,7 @@ export default function TailorsPage() {
   useEffect(() => { load(page) }, [page])
 
   const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3000) }
-  const fail   = (msg: string) => { setError(msg);   setSuccess('') }
+  const fail   = (msg: string) => { setError(msg); setSuccess('') }
 
   const handleAdd = async () => {
     if (!form.name || !form.code) { fail('Name and Code are required'); return }
@@ -76,170 +72,132 @@ export default function TailorsPage() {
       await deleteTailor(t.id)
       notify(`Tailor "${t.code}" deleted`)
       const newPage = tailors.length === 1 && page > 1 ? page - 1 : page
-      setPage(newPage)
-      load(newPage)
-    } catch {
-      fail('Cannot delete — tailor may have existing records')
-    }
+      setPage(newPage); load(newPage)
+    } catch { fail('Cannot delete — tailor may have existing records') }
   }
 
   return (
-    <main className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+    <main style={{ padding: '24px', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 700, margin: '0 auto' }}>
 
-        <div className="flex items-center gap-4 mb-6">
-          <a href="/" className="text-sm font-medium" style={{ color: '#9ca3af', textDecoration: 'none' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#2563eb')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
-            ← Back
-          </a>
+        {/* Header */}
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Tailors</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Tailors</h1>
         </div>
 
+        {/* Alerts */}
         {success && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', color: '#16a34a' }}>
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>
             {success}
           </div>
         )}
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#dc2626' }}>
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>
             {error}
           </div>
         )}
 
         {/* Add Form */}
-        <div className="card overflow-hidden mb-6">
-          <div className="flex items-center gap-3 px-5 py-3.5"
-            style={{ background: 'rgba(37,99,235,0.04)', borderBottom: '1.5px solid rgba(37,99,235,0.08)' }}>
-            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', borderRadius: '50%' }} />
-            <span className="text-xs font-bold tracking-widest" style={{ color: '#2563eb', letterSpacing: '2px' }}>ADD NEW TAILOR</span>
+        <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Add New Tailor</span>
           </div>
-          <div className="p-5 flex flex-col gap-4">
-            <div>
-              <label style={lbl}>FULL NAME *</label>
-              <input className="field" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Muhammad Javed" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>
-                <label style={lbl}>CODE *</label>
+                <label style={lbl}>Full Name *</label>
+                <input className="field" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Muhammad Javed" />
+              </div>
+              <div>
+                <label style={lbl}>Code *</label>
                 <input className="field" value={form.code} onChange={e => setForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} placeholder="MJ" maxLength={20} />
               </div>
               <div>
-                <label style={lbl}>PHONE</label>
+                <label style={lbl}>Phone</label>
                 <input className="field" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+971 50 000 0000" />
               </div>
             </div>
-            <button onClick={handleAdd} disabled={saving}
-              className="text-xs font-bold py-2.5 rounded-xl transition-all"
-              style={{ background: saving ? 'rgba(37,99,235,0.15)' : 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: saving ? '#9ca3af' : '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', boxShadow: saving ? 'none' : '0 3px 10px rgba(37,99,235,0.3)' }}>
-              {saving ? 'Saving…' : '+ ADD TAILOR'}
+            <button onClick={handleAdd} disabled={saving} className="btn-gold">
+              {saving ? 'Saving…' : '+ Add Tailor'}
             </button>
           </div>
         </div>
 
         {/* Tailor List */}
-        <div className="card overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-3.5"
-            style={{ background: 'rgba(37,99,235,0.04)', borderBottom: '1.5px solid rgba(37,99,235,0.08)' }}>
-            <div style={{ width: 8, height: 8, background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', borderRadius: '50%' }} />
-            <span className="text-xs font-bold tracking-widest" style={{ color: '#2563eb', letterSpacing: '2px' }}>ALL TAILORS</span>
-            <span className="ml-auto text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ background: 'rgba(37,99,235,0.1)', color: '#2563eb', border: '1px solid rgba(37,99,235,0.2)' }}>{total}</span>
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>All Tailors</span>
+            <span className="badge badge-blue">{total}</span>
           </div>
 
           {tailors.length === 0 ? (
-            <p className="text-center py-10 text-sm tracking-widest" style={{ color: '#d1d5db' }}>NO TAILORS YET</p>
+            <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>No tailors yet. Add one above.</p>
           ) : (
-            <div>
-              {tailors.map((t, idx) => (
-                <div key={t.id} style={{ borderBottom: '1px solid rgba(37,99,235,0.06)' }}>
-                  {editId === t.id ? (
-                    /* Edit row */
-                    <div className="p-4 flex flex-col gap-3"
-                      style={{ background: 'rgba(37,99,235,0.03)' }}>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label style={lbl}>NAME *</label>
-                          <input className="field text-sm" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+            <table className="z-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {tailors.map(t => (
+                  editId === t.id ? (
+                    <tr key={t.id}>
+                      <td colSpan={4} style={{ padding: '12px 14px', background: '#f5f8ff' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+                          <div>
+                            <label style={lbl}>Name *</label>
+                            <input className="field" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={lbl}>Code *</label>
+                            <input className="field" value={editForm.code} onChange={e => setEditForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} maxLength={20} />
+                          </div>
+                          <div>
+                            <label style={lbl}>Phone</label>
+                            <input className="field" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={handleUpdate} disabled={saving} className="btn-gold" style={{ whiteSpace: 'nowrap' }}>
+                              {saving ? 'Saving…' : 'Update'}
+                            </button>
+                            <button onClick={() => setEditId(null)} className="btn-ghost">Cancel</button>
+                          </div>
                         </div>
-                        <div>
-                          <label style={lbl}>CODE *</label>
-                          <input className="field text-sm" value={editForm.code} onChange={e => setEditForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} maxLength={20} />
-                        </div>
-                      </div>
-                      <div>
-                        <label style={lbl}>PHONE</label>
-                        <input className="field text-sm" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} placeholder="+971 50 000 0000" />
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={handleUpdate} disabled={saving}
-                          className="flex-1 text-xs font-bold py-2 rounded-xl"
-                          style={{ background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#fff', border: 'none', cursor: 'pointer', boxShadow: '0 3px 10px rgba(37,99,235,0.25)' }}>
-                          {saving ? 'Saving…' : 'Update'}
-                        </button>
-                        <button onClick={() => setEditId(null)}
-                          className="text-xs px-4 py-2 rounded-xl font-semibold"
-                          style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', color: '#64748b', cursor: 'pointer' }}>
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                   ) : (
-                    /* Normal row */
-                    <div className="flex items-center justify-between px-5 py-3.5"
-                      style={{ background: idx % 2 === 0 ? '#ffffff' : '#fafbff' }}>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                          style={{ background: 'rgba(37,99,235,0.08)', border: '1.5px solid rgba(37,99,235,0.2)', color: '#2563eb' }}>
-                          {t.code}
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: '#1e293b' }}>{t.name}</p>
-                          {t.phone && <p className="text-xs" style={{ color: '#9ca3af' }}>{t.phone}</p>}
+                    <tr key={t.id}>
+                      <td><span className="badge badge-blue">{t.code}</span></td>
+                      <td style={{ fontWeight: 500, color: '#1e293b' }}>{t.name}</td>
+                      <td style={{ color: '#6b7280' }}>{t.phone || '—'}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button onClick={() => openEdit(t)} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>Edit</button>
+                          <button onClick={() => handleDelete(t)} className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }}>Delete</button>
                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => openEdit(t)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold"
-                          style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', color: '#2563eb', cursor: 'pointer' }}>
-                          Edit
-                        </button>
-                        <button onClick={() => handleDelete(t)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold"
-                          style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', cursor: 'pointer' }}>
-                          Del
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                      </td>
+                    </tr>
+                  )
+                ))}
+              </tbody>
+            </table>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3.5"
-              style={{ borderTop: '1.5px solid rgba(37,99,235,0.08)', background: 'rgba(37,99,235,0.02)' }}>
-              <span className="text-xs" style={{ color: '#94a3b8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid #e8ecf0', background: '#f8f9fb' }}>
+              <span style={{ fontSize: 12, color: '#6b7280' }}>
                 {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
               </span>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}
-                  className="text-xs px-3 py-1.5 rounded-lg"
-                  style={{ background: '#fff', border: '1px solid #e2e8f0', color: page <= 1 ? '#cbd5e1' : '#475569', cursor: page <= 1 ? 'not-allowed' : 'pointer' }}>
-                  ← Prev
-                </button>
-                <span className="text-xs font-bold px-3 py-1.5 rounded-lg"
-                  style={{ background: 'rgba(37,99,235,0.08)', color: '#2563eb' }}>
-                  {page} / {totalPages}
-                </span>
-                <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}
-                  className="text-xs px-3 py-1.5 rounded-lg"
-                  style={{ background: '#fff', border: '1px solid #e2e8f0', color: page >= totalPages ? '#cbd5e1' : '#475569', cursor: page >= totalPages ? 'not-allowed' : 'pointer' }}>
-                  Next →
-                </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => setPage(p => p - 1)} disabled={page <= 1} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>← Prev</button>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#2563eb', padding: '4px 10px', background: '#eff6ff', borderRadius: 4 }}>{page} / {totalPages}</span>
+                <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>Next →</button>
               </div>
             </div>
           )}

@@ -2,12 +2,76 @@
 import { useEffect, useState } from 'react'
 import { getSummary, Summary } from '@/lib/api'
 
-const actions = [
-  { href: '/job-invoice', icon: '✦', title: 'Shop Entry',   desc: 'Shop · Order · Payment',            accent: '#2563eb', rgb: '37,99,235',   gradient: 'linear-gradient(135deg,#2563eb,#1d4ed8)' },
-  { href: '/report',      icon: '↓', title: 'Reports',      desc: 'Monthly PDF · per-tailor summary',  accent: '#0891b2', rgb: '8,145,178',   gradient: 'linear-gradient(135deg,#0891b2,#0e7490)' },
-  { href: '/tailors',     icon: '人', title: 'Tailors',      desc: 'Manage tailor list',                accent: '#16a34a', rgb: '22,163,74',   gradient: 'linear-gradient(135deg,#16a34a,#15803d)' },
-  { href: '/stitching',   icon: '⌀', title: 'Stitching',    desc: 'Shop stitching records',            accent: '#d97706', rgb: '217,119,6',   gradient: 'linear-gradient(135deg,#d97706,#b45309)' },
-  { href: '/ratesheet',   icon: '₌', title: 'Rate Sheet',   desc: 'MD number rate configuration',     accent: '#0369a1', rgb: '3,105,161',   gradient: 'linear-gradient(135deg,#0369a1,#0284c7)' },
+const modules = [
+  {
+    href: '/job-invoice',
+    label: 'Production',
+    desc: 'Shop entry, order, payment and material issue management.',
+    iconBg: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+    iconColor: '#2563eb',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="1"/>
+        <path d="M9 12h6M9 16h4"/>
+      </svg>
+    ),
+  },
+  {
+    href: '/tailors',
+    label: 'Tailors',
+    desc: 'Manage tailor profiles, codes, and contact information.',
+    iconBg: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+    iconColor: '#16a34a',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+    ),
+  },
+  {
+    href: '/stitching',
+    label: 'Stitching',
+    desc: 'Daily stitching work log with MD number auto-fill.',
+    iconBg: 'linear-gradient(135deg, #fef9c3 0%, #fde68a 100%)',
+    iconColor: '#d97706',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      </svg>
+    ),
+  },
+  {
+    href: '/ratesheet',
+    label: 'Rate Sheet',
+    desc: 'Configure per-MD number rates that auto-fill in invoices.',
+    iconBg: 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)',
+    iconColor: '#0891b2',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+      </svg>
+    ),
+  },
+  {
+    href: '/report',
+    label: 'Reports',
+    desc: 'Monthly summaries, per-tailor balance, and PDF export.',
+    iconBg: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
+    iconColor: '#7c3aed',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6"  y1="20" x2="6"  y2="14"/>
+        <line x1="2"  y1="20" x2="22" y2="20"/>
+      </svg>
+    ),
+  },
 ]
 
 export default function Home() {
@@ -18,132 +82,79 @@ export default function Home() {
   }, [])
 
   return (
-    <main className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-5xl mx-auto">
+    <main style={{ padding: '28px 24px', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
-        {/* Header */}
-        <div className="mb-10">
-          <h2 className="font-bold text-3xl" style={{ color: '#1e293b' }}>Dashboard</h2>
-          <p className="text-xs font-semibold tracking-widest mt-1.5" style={{ color: '#a5b4fc', letterSpacing: '2.5px' }}>
-            MEHAR PARDHA — TAILOR MANAGEMENT
-          </p>
+        {/* Page header */}
+        <div style={{ marginBottom: 28 }}>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', margin: 0 }}>Dashboard</h1>
         </div>
 
-        {/* ── Stat cards ─────────────────────────────────────────────────── */}
+        {/* Stat cards */}
         {summary && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
-
-            {/* ── Total Invoices ── */}
-            <div className="relative overflow-hidden rounded-3xl p-7 flex flex-col justify-between"
-              style={{
-                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                boxShadow: '0 20px 60px rgba(37,99,235,0.45)',
-                minHeight: 190,
-              }}>
-              {/* dot grid */}
-              <div style={{ position:'absolute',inset:0, backgroundImage:'radial-gradient(rgba(255,255,255,0.12) 1px,transparent 1px)', backgroundSize:'22px 22px', pointerEvents:'none' }} />
-              {/* shine */}
-              <div style={{ position:'absolute',top:0,left:0,right:0,height:'55%', background:'linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%)', pointerEvents:'none' }} />
-              {/* watermark */}
-              <div style={{ position:'absolute',right:-8,bottom:-16,fontSize:130,opacity:0.08,color:'#fff',lineHeight:1,fontWeight:900,pointerEvents:'none',userSelect:'none' }}>
-                #
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 32 }}>
+            {[
+              { label: 'Total Invoices', value: summary.total_invoices, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', icon: '#' },
+              { label: 'Total Pieces',   value: summary.total_pieces,   color: '#0891b2', bg: '#ecfeff', border: '#a5f3fc', icon: '◈' },
+              { label: 'Total Amount',   value: `AED ${summary.total_amount}`, color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', icon: 'د.إ' },
+            ].map(s => (
+              <div key={s.label} style={{ background: '#fff', border: '1px solid #e8ecf0', borderRadius: 10, padding: '20px 22px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 500, margin: 0 }}>{s.label}</p>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: s.bg, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: s.color, fontWeight: 700 }}>
+                    {s.icon}
+                  </div>
+                </div>
+                <p style={{ fontSize: 28, fontWeight: 700, color: s.color, margin: 0, lineHeight: 1 }}>{s.value}</p>
               </div>
-              {/* icon chip */}
-              <div style={{ display:'inline-flex',alignItems:'center',justifyContent:'center',width:46,height:46,borderRadius:14,background:'rgba(255,255,255,0.2)',backdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.3)',fontSize:20,color:'#fff',fontWeight:700,marginBottom:20 }}>
-                ≡
-              </div>
-              <div>
-                <p style={{ color:'rgba(255,255,255,0.65)',fontSize:'10px',fontWeight:700,letterSpacing:'2.5px',marginBottom:6 }}>TOTAL INVOICES</p>
-                <p style={{ color:'#ffffff',fontSize:'2.8rem',fontWeight:800,lineHeight:1,letterSpacing:'-1px' }}>
-                  {summary.total_invoices}
-                </p>
-              </div>
-            </div>
-
-            {/* ── Total Pieces ── */}
-            <div className="relative overflow-hidden rounded-3xl p-7 flex flex-col justify-between"
-              style={{
-                background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)',
-                boxShadow: '0 20px 60px rgba(14,165,233,0.4)',
-                minHeight: 190,
-              }}>
-              <div style={{ position:'absolute',inset:0, backgroundImage:'radial-gradient(rgba(255,255,255,0.12) 1px,transparent 1px)', backgroundSize:'22px 22px', pointerEvents:'none' }} />
-              <div style={{ position:'absolute',top:0,left:0,right:0,height:'55%', background:'linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%)', pointerEvents:'none' }} />
-              <div style={{ position:'absolute',right:-8,bottom:-16,fontSize:130,opacity:0.08,color:'#fff',lineHeight:1,fontWeight:900,pointerEvents:'none',userSelect:'none' }}>
-                ◈
-              </div>
-              <div style={{ display:'inline-flex',alignItems:'center',justifyContent:'center',width:46,height:46,borderRadius:14,background:'rgba(255,255,255,0.2)',backdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.3)',fontSize:20,color:'#fff',fontWeight:700,marginBottom:20 }}>
-                ⬡
-              </div>
-              <div>
-                <p style={{ color:'rgba(255,255,255,0.65)',fontSize:'10px',fontWeight:700,letterSpacing:'2.5px',marginBottom:6 }}>TOTAL PIECES</p>
-                <p style={{ color:'#ffffff',fontSize:'2.8rem',fontWeight:800,lineHeight:1,letterSpacing:'-1px' }}>
-                  {summary.total_pieces}
-                </p>
-              </div>
-            </div>
-
-            {/* ── Total Amount ── */}
-            <div className="relative overflow-hidden rounded-3xl p-7 flex flex-col justify-between"
-              style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                boxShadow: '0 20px 60px rgba(16,185,129,0.4)',
-                minHeight: 190,
-              }}>
-              <div style={{ position:'absolute',inset:0, backgroundImage:'radial-gradient(rgba(255,255,255,0.12) 1px,transparent 1px)', backgroundSize:'22px 22px', pointerEvents:'none' }} />
-              <div style={{ position:'absolute',top:0,left:0,right:0,height:'55%', background:'linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%)', pointerEvents:'none' }} />
-              <div style={{ position:'absolute',right:-8,bottom:-16,fontSize:130,opacity:0.08,color:'#fff',lineHeight:1,fontWeight:900,pointerEvents:'none',userSelect:'none' }}>
-                ₌
-              </div>
-              <div style={{ display:'inline-flex',alignItems:'center',justifyContent:'center',width:46,height:46,borderRadius:14,background:'rgba(255,255,255,0.2)',backdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,0.3)',fontSize:18,color:'#fff',fontWeight:700,marginBottom:20 }}>
-                د.إ
-              </div>
-              <div>
-                <p style={{ color:'rgba(255,255,255,0.65)',fontSize:'10px',fontWeight:700,letterSpacing:'2.5px',marginBottom:6 }}>TOTAL AMOUNT</p>
-                <p style={{ color:'#ffffff',fontSize:'2.2rem',fontWeight:800,lineHeight:1,letterSpacing:'-0.5px' }}>
-                  AED {summary.total_amount}
-                </p>
-              </div>
-            </div>
-
+            ))}
           </div>
         )}
 
-        {/* ── Quick-action grid ───────────────────────────────────────────── */}
-        <p className="text-[11px] font-bold tracking-widest mb-4" style={{ color: '#a5b4fc', letterSpacing: '2.5px' }}>QUICK ACCESS</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {actions.map(a => (
-            <a
-              key={a.href}
-              href={a.href}
-              className="card p-5 flex items-center gap-4 no-underline transition-all"
-              style={{ textDecoration: 'none', border: `1.5px solid rgba(${a.rgb},0.15)` }}
-              onMouseEnter={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.transform = 'translateY(-3px)'
-                el.style.boxShadow = `0 12px 32px rgba(${a.rgb},0.18)`
-                el.style.borderColor = `rgba(${a.rgb},0.35)`
-              }}
-              onMouseLeave={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.transform = 'translateY(0)'
-                el.style.boxShadow = '0 2px 12px rgba(79,70,229,0.07)'
-                el.style.borderColor = `rgba(${a.rgb},0.15)`
-              }}
-            >
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0"
-                style={{ background: a.gradient, color: '#ffffff', boxShadow: `0 4px 14px rgba(${a.rgb},0.35)` }}
-              >
-                {a.icon}
-              </div>
-              <div className="min-w-0">
-                <p className="font-bold text-sm leading-tight" style={{ color: '#1e293b' }}>{a.title}</p>
-                <p className="text-xs mt-0.5 truncate" style={{ color: '#9ca3af' }}>{a.desc}</p>
-              </div>
-              <span className="ml-auto text-lg shrink-0" style={{ color: `rgba(${a.rgb},0.4)` }}>→</span>
-            </a>
-          ))}
+        {/* Module cards — Zoho style */}
+        <div style={{ marginBottom: 8 }}>
+          <p style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '0 0 14px' }}>Modules</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 14 }}>
+            {modules.map(m => (
+              <a key={m.href} href={m.href} style={{ textDecoration: 'none', display: 'block' }}>
+                <div style={{
+                  background: '#fff',
+                  border: '1px solid #e8ecf0',
+                  borderRadius: 10,
+                  padding: '20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'border-color 0.15s, box-shadow 0.15s',
+                  cursor: 'pointer',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLElement
+                    el.style.borderColor = m.iconColor
+                    el.style.boxShadow = `0 4px 16px rgba(0,0,0,0.08)`
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLElement
+                    el.style.borderColor = '#e8ecf0'
+                    el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'
+                  }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 10, background: m.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.iconColor, marginBottom: 14 }}>
+                    {m.icon}
+                  </div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', margin: '0 0 6px' }}>{m.label}</p>
+                  <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 16px', lineHeight: 1.5, flex: 1 }}>{m.desc}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: m.iconColor }}>
+                    Explore {m.label}
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2.5 6h7M6.5 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
         </div>
 
       </div>

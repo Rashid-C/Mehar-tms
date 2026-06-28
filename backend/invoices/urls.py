@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ShopStitchingViewSet, TailorViewSet,
     InvoiceViewSet, RateSheetViewSet, TailorOrderViewSet, PaymentViewSet,
-    JobInvoiceViewSet,
+    JobInvoiceViewSet, MaterialIssueViewSet,
 )
 
 router = DefaultRouter()
@@ -14,6 +14,7 @@ router.register(r'stitching', ShopStitchingViewSet)
 router.register(r'tailor-orders', TailorOrderViewSet)
 router.register(r'payments', PaymentViewSet)
 router.register(r'job-invoices', JobInvoiceViewSet)
+router.register(r'material-issues', MaterialIssueViewSet)
 
 
 urlpatterns = [

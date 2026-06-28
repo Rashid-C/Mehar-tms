@@ -1,12 +1,11 @@
 'use client'
-import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { useState } from 'react'
+import Image from 'next/image'
 
-const links = [
-  { href: '/',            label: 'Dashboard'   },
-  { href: '/job-invoice', label: 'Shop Entry' },
+const modules = [
+  { href: '/job-invoice', label: 'Production'  },
   { href: '/tailors',     label: 'Tailors'     },
   { href: '/ratesheet',   label: 'Rate Sheet'  },
   { href: '/stitching',   label: 'Stitching'   },
@@ -16,113 +15,122 @@ const links = [
 export default function Navbar() {
   const pathname = usePathname()
   const router   = useRouter()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [open, setOpen] = useState(false)
 
   if (pathname === '/login') return null
 
-  const handleLogout = () => {
+  const logout = () => {
     Cookies.remove('access_token')
     Cookies.remove('refresh_token')
     router.push('/login')
   }
 
-  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
+  const active = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   return (
-    <nav className="sticky top-0 z-50"
-      style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(37,99,235,0.08)', boxShadow: '0 2px 20px rgba(37,99,235,0.06)' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-17">
+    <>
+      {/* ── BAR 1 — dark top strip ─────────────────────────────────────── */}
+      <div style={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, zIndex: 60 }}>
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 48 }}>
 
-        {/* Logo */}
-        <a href="/" className="flex items-center gap-3 no-underline shrink-0" style={{ textDecoration: 'none' }}>
-          <div style={{ border: '2px solid rgba(37,99,235,0.2)', borderRadius: '50%', padding: 2, background: 'rgba(37,99,235,0.05)', flexShrink: 0 }}>
-            <Image src="/logo.png" alt="Mehar Pardha" width={36} height={36} className="rounded-full object-contain" />
-          </div>
-          <div className="hidden sm:block">
-            <div className="flex items-baseline gap-2">
-              <span className="font-bold text-[15px] tracking-tight" style={{ color: '#1e293b' }}>MEHAR PARDHA</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#fff', letterSpacing: '1px' }}>DUBAI</span>
+          {/* Logo + brand */}
+          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flexShrink: 0 }}>
+            <Image src="/logo.png" alt="Mehar Pardha" width={32} height={32} style={{ objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+              <span style={{ color: '#f0d060', fontSize: 13, fontWeight: 700, letterSpacing: 0.8 }}>MEHAR PARDHA</span>
+              <span style={{ color: '#94a3b8', fontSize: 10, letterSpacing: 0.4 }}>Tailor Management</span>
             </div>
-            <p className="text-[10px] font-medium tracking-widest" style={{ color: '#93c5fd', letterSpacing: '1.5px' }}>TAILOR MANAGEMENT</p>
+          </a>
+
+          {/* Module links — desktop */}
+          <div className="hidden md:flex" style={{ alignItems: 'center', gap: 0 }}>
+            {modules.map((m, i) => (
+              <span key={m.href} style={{ display: 'flex', alignItems: 'center' }}>
+                <a href={m.href} style={{
+                  color: active(m.href) ? '#ffffff' : '#94a3b8',
+                  fontSize: 13, fontWeight: active(m.href) ? 600 : 400,
+                  padding: '0 14px', textDecoration: 'none', height: 48,
+                  display: 'flex', alignItems: 'center',
+                  borderBottom: active(m.href) ? '2px solid #f0d060' : '2px solid transparent',
+                  transition: 'color 0.15s',
+                }}
+                  onMouseEnter={e => { if (!active(m.href)) (e.currentTarget as HTMLElement).style.color = '#e2e8f0' }}
+                  onMouseLeave={e => { if (!active(m.href)) (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
+                >
+                  {m.label}
+                </a>
+                {i < modules.length - 1 && <div style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.1)' }} />}
+              </span>
+            ))}
           </div>
-        </a>
 
-        {/* Desktop nav — pill container */}
-        <div className="hidden md:flex items-center gap-1 px-1.5 py-1.5 rounded-2xl"
-          style={{ background: 'rgba(37,99,235,0.06)', border: '1.5px solid rgba(37,99,235,0.1)' }}>
-          {links.map(link => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="relative text-[13px] font-medium px-4 py-2 rounded-xl transition-all no-underline whitespace-nowrap"
-              style={isActive(link.href) ? {
-                background: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
-                color: '#ffffff',
-                fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(37,99,235,0.35)',
-              } : {
-                color: '#6b7280',
-              }}
-              onMouseEnter={e => { if (!isActive(link.href)) { const el = e.currentTarget as HTMLElement; el.style.color = '#2563eb'; el.style.background = 'rgba(37,99,235,0.08)' } }}
-              onMouseLeave={e => { if (!isActive(link.href)) { const el = e.currentTarget as HTMLElement; el.style.color = '#6b7280'; el.style.background = 'transparent' } }}
-            >
-              {link.label}
-            </a>
-          ))}
+          {/* Right — user + signout */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <button onClick={logout}
+              style={{ color: '#94a3b8', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 12, cursor: 'pointer', padding: '5px 12px', transition: 'color 0.15s, border-color 0.15s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f0d060'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(240,208,96,0.3)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#94a3b8'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)' }}>
+              Sign out
+            </button>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#f0d060,#d4a017)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a1a2e', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              M
+            </div>
+            {/* Mobile hamburger */}
+            <button className="md:hidden" onClick={() => setOpen(v => !v)}
+              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 8px', cursor: 'pointer', color: '#94a3b8' }}>
+              ☰
+            </button>
+          </div>
         </div>
-
-        {/* Right — logout button */}
-        <div className="hidden md:flex items-center gap-3 shrink-0">
-          <button onClick={handleLogout}
-            className="text-[13px] font-bold px-5 py-2.5 rounded-full transition-all"
-            style={{ background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', color: '#ffffff', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.3)', letterSpacing: '0.2px' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(37,99,235,0.45)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(37,99,235,0.3)' }}>
-            Logout →
-          </button>
-        </div>
-
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-xl gap-1.5"
-          style={{ background: 'rgba(37,99,235,0.07)', border: '1.5px solid rgba(37,99,235,0.15)', cursor: 'pointer' }}
-          onClick={() => setMenuOpen(v => !v)}
-          aria-label="Menu"
-        >
-          <span className="block w-5 h-0.5 transition-all rounded-full" style={{ background: menuOpen ? '#2563eb' : '#6b7280', transform: menuOpen ? 'rotate(45deg) translate(3px,3px)' : '' }} />
-          <span className="block w-5 h-0.5 transition-all rounded-full" style={{ background: menuOpen ? 'transparent' : '#6b7280', opacity: menuOpen ? 0 : 1 }} />
-          <span className="block w-5 h-0.5 transition-all rounded-full" style={{ background: menuOpen ? '#2563eb' : '#6b7280', transform: menuOpen ? 'rotate(-45deg) translate(3px,-3px)' : '' }} />
-        </button>
       </div>
 
-      {/* Mobile dropdown */}
-      {menuOpen && (
-        <div className="md:hidden px-4 pb-5 pt-2 flex flex-col gap-1"
-          style={{ borderTop: '1px solid rgba(37,99,235,0.08)', background: 'rgba(255,255,255,0.98)' }}>
-          {links.map(link => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium px-4 py-3 rounded-xl no-underline transition-all"
-              style={isActive(link.href) ? {
-                background: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
-                color: '#ffffff', fontWeight: 700,
-              } : {
-                color: '#4b5563',
+      {/* ── BAR 2 — white sub-nav ───────────────────────────────────────── */}
+      <div style={{ background: '#ffffff', borderBottom: '1px solid #e8ecf0', position: 'sticky', top: 48, zIndex: 50 }}>
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: 38 }}>
+          <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0, marginRight: 16 }}>
+            <Image src="/logo.png" alt="Mehar Pardha" width={20} height={20} style={{ objectFit: 'contain' }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', letterSpacing: 0.2 }}>Tailor ERP</span>
+          </a>
+          <div style={{ width: 1, height: 16, background: '#e2e8f0', marginRight: 16 }} />
+          <div className="hidden md:flex" style={{ height: '100%' }}>
+            {[{ href: '/', label: 'Dashboard' }, ...modules].map(m => (
+              <a key={m.href} href={m.href} style={{
+                fontSize: 13,
+                color: active(m.href) ? '#2563eb' : '#64748b',
+                fontWeight: active(m.href) ? 600 : 400,
+                textDecoration: 'none',
+                padding: '0 14px',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                borderBottom: active(m.href) ? '2px solid #2563eb' : '2px solid transparent',
+                transition: 'color 0.15s, border-color 0.15s',
               }}
-            >
-              {link.label}
+                onMouseEnter={e => { if (!active(m.href)) (e.currentTarget as HTMLElement).style.color = '#2563eb' }}
+                onMouseLeave={e => { if (!active(m.href)) (e.currentTarget as HTMLElement).style.color = '#64748b' }}
+              >
+                {m.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Mobile dropdown ──────────────────────────────────────────────── */}
+      {open && (
+        <div className="md:hidden" style={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '8px 16px 16px', position: 'sticky', top: 48, zIndex: 45 }}>
+          {[{ href: '/', label: 'Dashboard' }, ...modules].map(m => (
+            <a key={m.href} href={m.href} onClick={() => setOpen(false)}
+              style={{ display: 'block', color: active(m.href) ? '#f0d060' : '#94a3b8', fontSize: 14, padding: '10px 12px', textDecoration: 'none', borderRadius: 6, marginBottom: 2, fontWeight: active(m.href) ? 600 : 400 }}>
+              {m.label}
             </a>
           ))}
-          <div style={{ height: 1, background: 'rgba(37,99,235,0.1)', margin: '6px 0' }} />
-          <button onClick={handleLogout}
-            className="text-sm font-bold px-4 py-3 rounded-xl text-left transition-all"
-            style={{ background: 'linear-gradient(135deg,#2563eb,#1d4ed8)', border: 'none', color: '#ffffff', cursor: 'pointer' }}>
-            Logout →
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '10px 0' }} />
+          <button onClick={logout} style={{ color: '#f87171', background: 'none', border: 'none', fontSize: 14, cursor: 'pointer', padding: '10px 12px', width: '100%', textAlign: 'left', fontWeight: 600 }}>
+            Sign out
           </button>
         </div>
       )}
-    </nav>
+    </>
   )
 }

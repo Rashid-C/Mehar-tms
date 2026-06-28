@@ -3,20 +3,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { getInvoices, getSummary, getTailors, getTailorJobSummary, Invoice, Tailor, TailorJobSummary } from '@/lib/api'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import PageHeader from '@/components/ui/PageHeader'
-import StatCard from '@/components/ui/StatCard'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 export default function Report() {
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [tailors, setTailors] = useState<Tailor[]>([])
-  const [jobSummary, setJobSummary] = useState<TailorJobSummary[]>([])
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [invoices, setInvoices]         = useState<Invoice[]>([])
+  const [tailors, setTailors]           = useState<Tailor[]>([])
+  const [jobSummary, setJobSummary]     = useState<TailorJobSummary[]>([])
+  const [selectedMonth, setSelectedMonth]   = useState(new Date().getMonth() + 1)
   const [selectedTailor, setSelectedTailor] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [totalPieces, setTotalPieces] = useState(0)
-  const [totalAmount, setTotalAmount] = useState(0)
+  const [loading, setLoading]           = useState(true)
+  const [totalPieces, setTotalPieces]   = useState(0)
+  const [totalAmount, setTotalAmount]   = useState(0)
 
   const fetchReport = useCallback(async () => {
     setLoading(true)
@@ -55,8 +53,8 @@ export default function Report() {
     doc.setDrawColor(37,99,235); doc.setLineWidth(0.3)
     const boxes = [
       {label:'TOTAL INVOICES', value:String(invoices.length), color:[30,27,75] as [number,number,number]},
-      {label:'TOTAL PIECES', value:String(totalPieces), color:[37,99,235] as [number,number,number]},
-      {label:'TOTAL AMOUNT', value:`AED ${totalAmount}`, color:[37,99,235] as [number,number,number]},
+      {label:'TOTAL PIECES',   value:String(totalPieces),     color:[37,99,235] as [number,number,number]},
+      {label:'TOTAL AMOUNT',   value:`AED ${totalAmount}`,    color:[37,99,235] as [number,number,number]},
     ]
     boxes.forEach((b,i) => {
       const x = startX+i*(boxW+gap)
@@ -113,186 +111,154 @@ export default function Report() {
   }
 
   return (
-    <main className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <PageHeader title="Monthly Report" subtitle="FILTER BY MONTH AND TAILOR — DOWNLOAD AS PDF" />
+    <main style={{ padding: '24px', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-7">
-          <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="field w-auto">
-            {MONTHS.map((m,i) => <option key={i} value={i+1}>{m}</option>)}
-          </select>
-          <select value={selectedTailor} onChange={e => setSelectedTailor(e.target.value)} className="field w-auto">
-            <option value="">All Tailors</option>
-            {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
-          </select>
-          <button onClick={downloadPDF} disabled={invoices.length === 0} className="btn-gold">
-            ↓ Download PDF
-          </button>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Reports</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Monthly Report</h1>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <select className="field" style={{ width: 'auto' }} value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
+              {MONTHS.map((m,i) => <option key={i} value={i+1}>{m}</option>)}
+            </select>
+            <select className="field" style={{ width: 'auto' }} value={selectedTailor} onChange={e => setSelectedTailor(e.target.value)}>
+              <option value="">All Tailors</option>
+              {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
+            </select>
+            <button onClick={downloadPDF} disabled={invoices.length === 0} className="btn-gold">
+              ↓ Download PDF
+            </button>
+          </div>
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
-          <StatCard label="MONTH" value={MONTHS[selectedMonth-1]} color="dark" />
-          <StatCard label="TOTAL PIECES" value={totalPieces} color="blue" />
-          <StatCard label="TOTAL AMOUNT" value={`AED ${totalAmount}`} color="blue" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
+          {[
+            { label: 'Month',         value: MONTHS[selectedMonth-1], color: '#1e293b' },
+            { label: 'Total Pieces',  value: totalPieces,             color: '#2563eb' },
+            { label: 'Total Amount',  value: `AED ${totalAmount}`,    color: '#16a34a' },
+          ].map(s => (
+            <div key={s.label} style={{ background: '#ffffff', border: '1px solid #e8ecf0', borderRadius: 8, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              <p style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{s.label}</p>
+              <p style={{ fontSize: 20, fontWeight: 700, color: s.color, margin: 0 }}>{s.value}</p>
+            </div>
+          ))}
         </div>
 
         {/* Job Invoice Tailor Summary */}
-        <div className="mb-7">
-          <h3 className="text-xs font-bold tracking-widest mb-4" style={{ color: '#2563eb', letterSpacing: '2px' }}>
-            JOB INVOICE SUMMARY — SHOP + ORDER PER TAILOR
-          </h3>
+        <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Job Invoice Summary — Shop + Order per Tailor</span>
+          </div>
           {jobSummary.length === 0 ? (
-            <div className="text-center py-8 text-xs tracking-widest rounded-2xl" style={{ color: '#d1d5db', border: '1.5px solid rgba(37,99,235,0.1)', background: '#f8faff' }}>
-              NO JOB INVOICE RECORDS FOR THIS MONTH
-            </div>
+            <p style={{ textAlign: 'center', padding: '32px', color: '#9ca3af', fontSize: 13 }}>No job invoice records for this month.</p>
           ) : (
-            <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(37,99,235,0.12)', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
-              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe' }}>
-                    {['TAILOR','SECTION 1 (SHOP)','SECTION 2 (ORDER)','COMBINED TOTAL'].map(h => (
-                      <th key={h} className="text-left px-4 py-3.5 text-xs font-bold" style={{ color: '#2563eb', letterSpacing: '1.5px' }}>{h}</th>
-                    ))}
+            <table className="z-table">
+              <thead>
+                <tr>
+                  <th>Tailor</th>
+                  <th>Shop (CR)</th>
+                  <th>Order (CR)</th>
+                  <th>Production (CR)</th>
+                  <th>Mat Issue (DR)</th>
+                  <th>Paid (DR)</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobSummary.map(row => (
+                  <tr key={row.tailor_id}>
+                    <td>
+                      <span className="badge badge-blue" style={{ marginRight: 6 }}>{row.tailor_code}</span>
+                      <span style={{ color: '#6b7280', fontSize: 12 }}>{row.tailor_name}</span>
+                    </td>
+                    <td style={{ color: '#2563eb', fontWeight: 500 }}>AED {row.shop_amount.toFixed(2)}</td>
+                    <td style={{ color: '#0891b2', fontWeight: 500 }}>AED {row.order_amount.toFixed(2)}</td>
+                    <td style={{ color: '#7c3aed', fontWeight: 500 }}>AED {row.production_amount.toFixed(2)}</td>
+                    <td style={{ color: '#d97706', fontWeight: 500 }}>AED {row.mat_issue_amount.toFixed(2)}</td>
+                    <td style={{ color: '#dc2626', fontWeight: 500 }}>AED {row.paid_amount.toFixed(2)}</td>
+                    <td style={{ color: row.balance >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 14 }}>AED {row.balance.toFixed(2)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {jobSummary.map((row, idx) => (
-                    <tr key={row.tailor_id} style={{ background: idx % 2 === 0 ? '#ffffff' : '#f8faff', borderBottom: '1px solid rgba(37,99,235,0.05)' }}>
-                      <td className="px-4 py-3.5">
-                        <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(37,99,235,0.08)', border: '1.5px solid rgba(37,99,235,0.2)', color: '#2563eb' }}>
-                          {row.tailor_code}
-                        </span>
-                        <span className="ml-2 text-xs" style={{ color: '#6b7280' }}>{row.tailor_name}</span>
-                      </td>
-                      <td className="px-4 py-3.5 font-semibold" style={{ color: '#2563eb' }}>AED {row.shop_amount.toFixed(2)}</td>
-                      <td className="px-4 py-3.5 font-semibold" style={{ color: '#0891b2' }}>AED {row.order_amount.toFixed(2)}</td>
-                      <td className="px-4 py-3.5 font-bold text-base" style={{ color: '#16a34a' }}>AED {row.total_amount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                {jobSummary.length > 0 && (
-                  <tfoot>
-                    <tr style={{ background: 'rgba(37,99,235,0.05)', borderTop: '1.5px solid rgba(37,99,235,0.12)' }}>
-                      <td className="px-4 py-3.5 text-xs font-bold" style={{ color: '#2563eb', letterSpacing: '1.5px' }}>TOTAL</td>
-                      <td className="px-4 py-3.5 font-bold" style={{ color: '#2563eb' }}>
-                        AED {jobSummary.reduce((s,r) => s+r.shop_amount, 0).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3.5 font-bold" style={{ color: '#0891b2' }}>
-                        AED {jobSummary.reduce((s,r) => s+r.order_amount, 0).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3.5 font-bold" style={{ color: '#16a34a' }}>
-                        AED {jobSummary.reduce((s,r) => s+r.total_amount, 0).toFixed(2)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
+                ))}
+              </tbody>
+              {jobSummary.length > 0 && (
+                <tfoot>
+                  <tr>
+                    <td>Total</td>
+                    <td>AED {jobSummary.reduce((s,r) => s+r.shop_amount, 0).toFixed(2)}</td>
+                    <td>AED {jobSummary.reduce((s,r) => s+r.order_amount, 0).toFixed(2)}</td>
+                    <td>AED {jobSummary.reduce((s,r) => s+r.production_amount, 0).toFixed(2)}</td>
+                    <td>AED {jobSummary.reduce((s,r) => s+r.mat_issue_amount, 0).toFixed(2)}</td>
+                    <td>AED {jobSummary.reduce((s,r) => s+r.paid_amount, 0).toFixed(2)}</td>
+                    <td>AED {jobSummary.reduce((s,r) => s+r.balance, 0).toFixed(2)}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
           )}
         </div>
 
-        {/* Table */}
+        {/* Invoice Table */}
         {loading ? (
-          <div className="flex items-center justify-center gap-3 py-20" style={{ color: '#93c5fd' }}>
-            <span className="spinner" /><span className="text-sm tracking-widest">LOADING...</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '60px', color: '#6b7280' }}>
+            <span className="spinner" /><span style={{ fontSize: 13 }}>Loading…</span>
           </div>
         ) : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden md:block rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(37,99,235,0.12)', boxShadow: '0 2px 12px rgba(37,99,235,0.07)' }}>
-              <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: '#eff6ff', borderBottom: '1px solid #dbeafe' }}>
-                    {['INV NO','TAILOR','MD NO','DATE','PC','RATE','AMOUNT','REMARKS',''].map(h => (
-                      <th key={h} className="text-left px-4 py-3.5 text-xs font-bold" style={{ color: '#2563eb', letterSpacing: '1.5px' }}>{h}</th>
-                    ))}
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Invoice Records</span>
+              <span className="badge badge-gray">{invoices.length} records</span>
+            </div>
+            <table className="z-table">
+              <thead>
+                <tr>
+                  <th>Inv No</th>
+                  <th>Tailor</th>
+                  <th>MD No</th>
+                  <th>Date</th>
+                  <th>Pieces</th>
+                  <th>Rate</th>
+                  <th>Amount</th>
+                  <th>Remarks</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map(inv => (
+                  <tr key={inv.id}>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, color: '#2563eb' }}>{inv.inv_no}</td>
+                    <td><span className="badge badge-blue">{inv.tailor_code}</span></td>
+                    <td style={{ color: '#374151' }}>{inv.md_no}</td>
+                    <td style={{ color: '#6b7280' }}>{inv.rcv_date}</td>
+                    <td style={{ fontWeight: 600 }}>{inv.pc_count}</td>
+                    <td style={{ color: '#6b7280' }}>{inv.rate}</td>
+                    <td style={{ color: '#16a34a', fontWeight: 600 }}>AED {inv.amount}</td>
+                    <td style={{ color: '#9ca3af' }}>{inv.remarks || '—'}</td>
+                    <td>
+                      <button onClick={e => { e.stopPropagation(); downloadInvoicePDF(inv) }} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>PDF</button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {invoices.map((inv,idx) => (
-                    <tr key={inv.id}
-                      style={{ background: idx%2===0 ? '#ffffff' : '#f8faff', borderBottom: '1px solid rgba(37,99,235,0.05)' }}
-                      onMouseEnter={e => (e.currentTarget.style.background='#eff6ff')}
-                      onMouseLeave={e => (e.currentTarget.style.background=idx%2===0?'#ffffff':'#f8faff')}>
-                      <td className="px-4 py-3.5 font-mono font-semibold" style={{ color:'#2563eb' }}>{inv.inv_no}</td>
-                      <td className="px-4 py-3.5">
-                        <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb' }}>{inv.tailor_code}</span>
-                      </td>
-                      <td className="px-4 py-3.5" style={{ color:'#4b5563' }}>{inv.md_no}</td>
-                      <td className="px-4 py-3.5" style={{ color:'#4b5563' }}>{inv.rcv_date}</td>
-                      <td className="px-4 py-3.5 font-semibold" style={{ color:'#1e293b' }}>{inv.pc_count}</td>
-                      <td className="px-4 py-3.5" style={{ color:'#4b5563' }}>{inv.rate}</td>
-                      <td className="px-4 py-3.5 font-bold" style={{ color:'#16a34a' }}>AED {inv.amount}</td>
-                      <td className="px-4 py-3.5 text-xs" style={{ color:'#9ca3af' }}>{inv.remarks||'—'}</td>
-                      <td className="px-4 py-3.5">
-                        <button onClick={e => { e.stopPropagation(); downloadInvoicePDF(inv) }}
-                          className="text-xs font-bold px-3 py-1 rounded-lg transition-all"
-                          style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb',cursor:'pointer' }}>
-                          PDF
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                {invoices.length > 0 && (
-                  <tfoot>
-                    <tr style={{ background:'rgba(37,99,235,0.05)',borderTop:'1.5px solid rgba(37,99,235,0.12)' }}>
-                      <td colSpan={4} className="px-4 py-3.5 text-xs font-bold" style={{ color:'#2563eb',letterSpacing:'1.5px' }}>TOTAL</td>
-                      <td className="px-4 py-3.5 font-bold" style={{ color:'#2563eb' }}>{totalPieces}</td>
-                      <td className="px-4 py-3.5" />
-                      <td className="px-4 py-3.5 font-bold" style={{ color:'#16a34a' }}>AED {totalAmount}</td>
-                      <td colSpan={2} className="px-4 py-3.5" />
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-              {invoices.length === 0 && (
-                <div className="text-center py-16 text-sm tracking-widest" style={{ color:'#d1d5db' }}>
-                  NO RECORDS FOR THIS MONTH
-                </div>
-              )}
-            </div>
-
-            {/* Mobile cards */}
-            <div className="md:hidden flex flex-col gap-3">
-              {invoices.length === 0 ? (
-                <div className="text-center py-16 text-sm tracking-widest" style={{ color:'#d1d5db' }}>NO RECORDS</div>
-              ) : invoices.map(inv => (
-                <div key={inv.id} className="card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold" style={{ color:'#2563eb' }}>#{inv.inv_no}</span>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb' }}>{inv.tailor_code}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm" style={{ color:'#16a34a' }}>AED {inv.amount}</span>
-                      <button onClick={() => downloadInvoicePDF(inv)}
-                        className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                        style={{ background:'rgba(37,99,235,0.08)',border:'1.5px solid rgba(37,99,235,0.2)',color:'#2563eb',cursor:'pointer' }}>
-                        PDF
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs" style={{ color:'#6b7280' }}>
-                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#93c5fd' }}>MD NO</span>{inv.md_no}</div>
-                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#93c5fd' }}>DATE</span>{inv.rcv_date}</div>
-                    <div><span className="block text-[10px] tracking-wider mb-0.5" style={{ color:'#93c5fd' }}>PC × RATE</span>{inv.pc_count} × {inv.rate}</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </tbody>
               {invoices.length > 0 && (
-                <div className="card p-4 flex items-center justify-between" style={{ borderColor:'rgba(37,99,235,0.3)' }}>
-                  <span className="text-xs font-bold tracking-widest" style={{ color:'#2563eb' }}>TOTAL</span>
-                  <div className="flex gap-4 text-sm font-bold">
-                    <span style={{ color:'#2563eb' }}>{totalPieces} pc</span>
-                    <span style={{ color:'#16a34a' }}>AED {totalAmount}</span>
-                  </div>
-                </div>
+                <tfoot>
+                  <tr>
+                    <td colSpan={4}>Total</td>
+                    <td>{totalPieces}</td>
+                    <td />
+                    <td>AED {totalAmount}</td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
               )}
-            </div>
-          </>
+            </table>
+            {invoices.length === 0 && (
+              <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>No records for this period.</p>
+            )}
+          </div>
         )}
       </div>
     </main>

@@ -3,28 +3,48 @@ import Cookies from 'js-cookie'
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 })
 
-// Attach token to every request
 api.interceptors.request.use(config => {
   const token = Cookies.get('access_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// If 401, redirect to login
+let _refreshing: Promise<string> | null = null
+
 api.interceptors.response.use(
   response => response,
-  error => {
-    if (error.response?.status === 401) {
-      Cookies.remove('access_token')
-      Cookies.remove('refresh_token')
-      window.location.href = '/login'
+  async error => {
+    const original = error.config
+    if (error.response?.status === 401 && !original._retry) {
+      original._retry = true
+      const refresh = Cookies.get('refresh_token')
+      if (!refresh) {
+        Cookies.remove('access_token')
+        window.location.href = '/login'
+        return Promise.reject(error)
+      }
+      try {
+        if (!_refreshing) {
+          _refreshing = axios
+            .post(`${process.env.NEXT_PUBLIC_API_URL}/token/refresh/`, { refresh })
+            .then(r => {
+              Cookies.set('access_token', r.data.access, { expires: 1 })
+              _refreshing = null
+              return r.data.access
+            })
+        }
+        const newToken = await _refreshing
+        original.headers.Authorization = `Bearer ${newToken}`
+        return api(original)
+      } catch {
+        Cookies.remove('access_token')
+        Cookies.remove('refresh_token')
+        window.location.href = '/login'
+        return Promise.reject(error)
+      }
     }
     return Promise.reject(error)
   }
@@ -198,12 +218,29 @@ export interface TailorJobSummary {
   shop_qty: number
   order_amount: number
   order_qty: number
+  production_amount: number
+  production_qty: number
+  mat_issue_amount: number
   total_amount: number
   paid_amount: number
   balance: number
-  opening_balance?: number
-  closing_balance?: number
 }
+
+export interface MaterialIssue {
+  id: number
+  tailor: number
+  tailor_code: string
+  tailor_name: string
+  date: string
+  description: string
+  amount: number
+  remarks: string
+}
+
+export const getMaterialIssues = (params?: object) => api.get<MaterialIssue[]>('/material-issues/', { params })
+export const createMaterialIssue = (data: object) => api.post<MaterialIssue>('/material-issues/', data)
+export const updateMaterialIssue = (id: number, data: object) => api.put<MaterialIssue>(`/material-issues/${id}/`, data)
+export const deleteMaterialIssue = (id: number) => api.delete(`/material-issues/${id}/`)
 
 export const getTailorJobSummary = (params?: object) =>
   api.get<TailorJobSummary[]>('/job-invoices/tailor_summary/', { params })

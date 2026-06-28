@@ -4,11 +4,12 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Sum, Max, Q
 import re
-from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Payment, JobInvoice
+from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Payment, JobInvoice, MaterialIssue
 from .serializers import (
     TailorSerializer, InvoiceSerializer, RateSheetSerializer,
     ShopStitchingSerializer,
     TailorOrderSerializer, PaymentSerializer, JobInvoiceSerializer,
+    MaterialIssueSerializer,
 )
 
 
@@ -219,34 +220,55 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def tailor_summary(self, request):
-        from datetime import date as date_type
-        month    = request.query_params.get('month')
-        date_str = request.query_params.get('date')
+        month = request.query_params.get('month')
 
-        job_qs    = JobInvoice.objects.select_related('tailor').all()
-        order_qs  = TailorOrder.objects.select_related('tailor').all()
-        pay_qs    = Payment.objects.select_related('tailor').all()
+        job_qs  = JobInvoice.objects.select_related('tailor').all()
+        order_qs = TailorOrder.objects.select_related('tailor').all()
+        prod_qs  = ShopStitching.objects.select_related('tailor').all()
+        mat_qs   = MaterialIssue.objects.select_related('tailor').all()
+        pay_qs   = Payment.objects.select_related('tailor').all()
 
         if month:
             job_qs   = job_qs.filter(date__month=month)
             order_qs = order_qs.filter(date__month=month)
+            prod_qs  = prod_qs.filter(date__month=month)
+            mat_qs   = mat_qs.filter(date__month=month)
             pay_qs   = pay_qs.filter(date__month=month)
+
+        def _new(tailor):
+            return {
+                'tailor_id': tailor.id, 'tailor_code': tailor.code, 'tailor_name': tailor.name,
+                'shop_amount': 0.0, 'shop_qty': 0,
+                'order_amount': 0.0, 'order_qty': 0,
+                'production_amount': 0.0, 'production_qty': 0,
+                'mat_issue_amount': 0.0,
+                'paid_amount': 0.0,
+            }
 
         by_tailor: dict = {}
 
         for j in job_qs:
             tid = j.tailor.id
-            if tid not in by_tailor:
-                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': j.tailor.code, 'tailor_name': j.tailor.name, 'shop_amount': 0.0, 'shop_qty': 0, 'order_amount': 0.0, 'order_qty': 0, 'paid_amount': 0.0}
+            if tid not in by_tailor: by_tailor[tid] = _new(j.tailor)
             by_tailor[tid]['shop_amount'] += float(j.amount)
-            by_tailor[tid]['shop_qty'] += j.pc_count
+            by_tailor[tid]['shop_qty']    += j.pc_count
 
         for o in order_qs:
             tid = o.tailor.id
-            if tid not in by_tailor:
-                by_tailor[tid] = {'tailor_id': tid, 'tailor_code': o.tailor.code, 'tailor_name': o.tailor.name, 'shop_amount': 0.0, 'shop_qty': 0, 'order_amount': 0.0, 'order_qty': 0, 'paid_amount': 0.0}
+            if tid not in by_tailor: by_tailor[tid] = _new(o.tailor)
             by_tailor[tid]['order_amount'] += float(o.amount)
-            by_tailor[tid]['order_qty'] += o.quantity
+            by_tailor[tid]['order_qty']    += o.quantity
+
+        for s in prod_qs:
+            tid = s.tailor.id
+            if tid not in by_tailor: by_tailor[tid] = _new(s.tailor)
+            by_tailor[tid]['production_amount'] += float(s.total)
+            by_tailor[tid]['production_qty']    += s.pc_count
+
+        for m in mat_qs:
+            tid = m.tailor.id
+            if tid not in by_tailor: by_tailor[tid] = _new(m.tailor)
+            by_tailor[tid]['mat_issue_amount'] += float(m.amount)
 
         for p in pay_qs:
             tid = p.tailor.id
@@ -255,32 +277,9 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
 
         result = []
         for data in by_tailor.values():
-            data['total_amount'] = data['shop_amount'] + data['order_amount']
-            data['balance'] = data['total_amount'] - data['paid_amount']
+            data['total_amount'] = data['shop_amount'] + data['order_amount'] + data['production_amount']
+            data['balance']      = data['total_amount'] - data['mat_issue_amount'] - data['paid_amount']
             result.append(data)
-
-        # Opening / closing balances for a specific date
-        if date_str:
-            try:
-                target = date_type.fromisoformat(date_str)
-            except ValueError:
-                return Response(sorted(result, key=lambda x: x['tailor_code']))
-
-            def _map(qs):
-                return {r['tailor_id']: float(r['total'] or 0) for r in qs}
-
-            sb = _map(JobInvoice.objects.filter(date__lt=target).values('tailor_id').annotate(total=Sum('amount')))
-            ob = _map(TailorOrder.objects.filter(date__lt=target).values('tailor_id').annotate(total=Sum('amount')))
-            pb = _map(Payment.objects.filter(date__lt=target).values('tailor_id').annotate(total=Sum('amount')))
-
-            sc = _map(JobInvoice.objects.filter(date__lte=target).values('tailor_id').annotate(total=Sum('amount')))
-            oc = _map(TailorOrder.objects.filter(date__lte=target).values('tailor_id').annotate(total=Sum('amount')))
-            pc = _map(Payment.objects.filter(date__lte=target).values('tailor_id').annotate(total=Sum('amount')))
-
-            for data in result:
-                tid = data['tailor_id']
-                data['opening_balance'] = (sb.get(tid, 0) + ob.get(tid, 0)) - pb.get(tid, 0)
-                data['closing_balance'] = (sc.get(tid, 0) + oc.get(tid, 0)) - pc.get(tid, 0)
 
         return Response(sorted(result, key=lambda x: x['tailor_code']))
 
@@ -358,3 +357,20 @@ class PaymentViewSet(viewsets.ModelViewSet):
             'total_amount': total_amount,
         })
 
+
+class MaterialIssueViewSet(viewsets.ModelViewSet):
+    queryset = MaterialIssue.objects.select_related('tailor').all()
+    serializer_class = MaterialIssueSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['tailor__code', 'tailor__name', 'description']
+    ordering_fields = ['date', 'amount']
+
+    def get_queryset(self):
+        queryset = MaterialIssue.objects.select_related('tailor').all()
+        tailor = self.request.query_params.get('tailor')
+        date   = self.request.query_params.get('date')
+        if tailor:
+            queryset = queryset.filter(tailor__code=tailor)
+        if date:
+            queryset = queryset.filter(date=date)
+        return queryset
