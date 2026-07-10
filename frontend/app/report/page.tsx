@@ -6,24 +6,32 @@ import autoTable from 'jspdf-autotable'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+const formatDateLabel = (d: string) => {
+  const [y, m, day] = d.split('-').map(Number)
+  return `${day} ${MONTHS[m - 1]} ${y}`
+}
+
 export default function Report() {
   const [invoices, setInvoices]         = useState<Invoice[]>([])
   const [tailors, setTailors]           = useState<Tailor[]>([])
   const [jobSummary, setJobSummary]     = useState<TailorJobSummary[]>([])
   const [selectedMonth, setSelectedMonth]   = useState(new Date().getMonth() + 1)
+  const [selectedDate, setSelectedDate]     = useState('')
   const [selectedTailor, setSelectedTailor] = useState('')
   const [loading, setLoading]           = useState(true)
   const [totalPieces, setTotalPieces]   = useState(0)
   const [totalAmount, setTotalAmount]   = useState(0)
 
+  const periodLabel = selectedDate ? formatDateLabel(selectedDate) : `${MONTHS[selectedMonth - 1]} 2026`
+
   const fetchReport = useCallback(async () => {
     setLoading(true)
     try {
-      const params: Record<string, string | number> = { month: selectedMonth }
+      const params: Record<string, string | number> = selectedDate ? { date: selectedDate } : { month: selectedMonth }
       if (selectedTailor) params.tailor = selectedTailor
       const [invRes, sumRes, tailorRes, jobRes] = await Promise.all([
         getInvoices(params), getSummary(params), getTailors({ page_size: 1000 }),
-        getTailorJobSummary({ month: selectedMonth }),
+        getTailorJobSummary(selectedDate ? { date: selectedDate } : { month: selectedMonth }),
       ])
       setInvoices(invRes.data)
       setTotalPieces(sumRes.data.total_pieces)
@@ -31,7 +39,7 @@ export default function Report() {
       setTailors(tailorRes.data.results)
       setJobSummary(selectedTailor ? jobRes.data.filter(r => r.tailor_code === selectedTailor) : jobRes.data)
     } finally { setLoading(false) }
-  }, [selectedMonth, selectedTailor])
+  }, [selectedMonth, selectedDate, selectedTailor])
 
   useEffect(() => { fetchReport() }, [fetchReport])
 
@@ -44,7 +52,7 @@ export default function Report() {
     doc.setFontSize(8); doc.setFont('helvetica','normal')
     doc.text('TAILOR MANAGEMENT SYSTEM — DEIRA, DUBAI', W/2, 21, {align:'center'})
     doc.setTextColor(37,99,235); doc.setFontSize(13); doc.setFont('helvetica','bold')
-    doc.text(`MONTHLY REPORT — ${MONTHS[selectedMonth-1].toUpperCase()} 2026`, W/2, 38, {align:'center'})
+    doc.text(`${selectedDate ? 'DAILY' : 'MONTHLY'} REPORT — ${periodLabel.toUpperCase()}`, W/2, 38, {align:'center'})
     if (selectedTailor) {
       doc.setTextColor(107,114,128); doc.setFontSize(9); doc.setFont('helvetica','normal')
       doc.text(`Tailor: ${selectedTailor}`, W/2, 46, {align:'center'})
@@ -78,7 +86,76 @@ export default function Report() {
     const finalY = (doc as jsPDF & {lastAutoTable:{finalY:number}}).lastAutoTable.finalY+10
     doc.setTextColor(165,180,252); doc.setFontSize(7)
     doc.text(`Generated ${new Date().toLocaleDateString('en-AE')} — Mehar Pardha`, W/2, finalY, {align:'center'})
-    doc.save(`Mehar-Pardha-${MONTHS[selectedMonth-1]}-2026.pdf`)
+    doc.save(`Mehar-Pardha-${selectedDate || MONTHS[selectedMonth-1]+'-2026'}.pdf`)
+  }
+
+  const getTailorPhone = (code: string) => tailors.find(t => t.code === code)?.phone
+  const getOpeningBalance = (code: string) => {
+    const t = tailors.find(t => t.code === code)
+    return t ? parseFloat(String(t.opening_balance)) || 0 : 0
+  }
+
+  const downloadTailorStatementPDF = (row: TailorJobSummary) => {
+    const openingBalance = getOpeningBalance(row.tailor_code)
+    const pendingBalance = openingBalance + row.total_amount - row.mat_issue_amount - row.paid_amount
+    const doc = new jsPDF()
+    const W = doc.internal.pageSize.getWidth()
+    doc.setFillColor(37,99,235); doc.rect(0,0,W,28,'F')
+    doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold')
+    doc.text('MEHAR PARDHA', W/2, 12, {align:'center'})
+    doc.setFontSize(8); doc.setFont('helvetica','normal')
+    doc.text('TAILOR MANAGEMENT SYSTEM — DEIRA, DUBAI', W/2, 21, {align:'center'})
+    doc.setTextColor(37,99,235); doc.setFontSize(14); doc.setFont('helvetica','bold')
+    doc.text(`TAILOR STATEMENT — ${row.tailor_code}`, W/2, 40, {align:'center'})
+    doc.setTextColor(107,114,128); doc.setFontSize(9); doc.setFont('helvetica','normal')
+    doc.text(`${row.tailor_name} · ${periodLabel}`, W/2, 47, {align:'center'})
+    doc.setDrawColor(37,99,235); doc.setLineWidth(0.3); doc.line(14,52,W-14,52)
+
+    let y = 64
+    const lines: [string, string][] = []
+    if (openingBalance !== 0) lines.push(['Opening Balance', `AED ${openingBalance.toFixed(2)}`])
+    lines.push(
+      [`Shop (${row.shop_qty} pc)`, `AED ${row.shop_amount.toFixed(2)}`],
+      [`Order (${row.order_qty} qty)`, `AED ${row.order_amount.toFixed(2)}`],
+      [`Production (${row.production_qty} pc)`, `AED ${row.production_amount.toFixed(2)}`],
+      ['Total Earned', `AED ${row.total_amount.toFixed(2)}`],
+      ['Mat Issue', `- AED ${row.mat_issue_amount.toFixed(2)}`],
+      ['Already Paid', `- AED ${row.paid_amount.toFixed(2)}`],
+    )
+    lines.forEach(([label, value]) => {
+      doc.setTextColor(107,114,128); doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.text(label,20,y)
+      doc.setTextColor(30,27,75); doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.text(value,W-20,y,{align:'right'})
+      y+=10
+    })
+
+    doc.setFillColor(245,243,255); doc.setDrawColor(37,99,235); doc.setLineWidth(0.5)
+    doc.roundedRect(14,y+5,W-28,24,3,3,'FD')
+    doc.setTextColor(165,180,252); doc.setFontSize(9); doc.setFont('helvetica','normal')
+    doc.text('PENDING BALANCE', W/2, y+15, {align:'center'})
+    if (pendingBalance >= 0) doc.setTextColor(22,163,74); else doc.setTextColor(220,38,38)
+    doc.setFontSize(18); doc.setFont('helvetica','bold')
+    doc.text(`AED ${pendingBalance.toFixed(2)}`, W/2, y+25, {align:'center'})
+
+    doc.setTextColor(165,180,252); doc.setFontSize(7); doc.setFont('helvetica','normal')
+    doc.text(`Generated ${new Date().toLocaleDateString('en-AE')} — Mehar Pardha`, W/2, 270, {align:'center'})
+    doc.save(`Statement-${row.tailor_code}-${selectedDate || MONTHS[selectedMonth-1]+'-2026'}.pdf`)
+  }
+
+  const buildStatementText = (row: TailorJobSummary) => {
+    const openingBalance = getOpeningBalance(row.tailor_code)
+    const pendingBalance = openingBalance + row.total_amount - row.mat_issue_amount - row.paid_amount
+    const lines = [`${row.tailor_name} (${row.tailor_code}) — ${periodLabel}`, '']
+    if (openingBalance !== 0) lines.push(`Opening Balance: AED ${openingBalance.toFixed(2)}`)
+    lines.push(
+      `Shop (${row.shop_qty} pc): AED ${row.shop_amount.toFixed(2)}`,
+      `Order (${row.order_qty} qty): AED ${row.order_amount.toFixed(2)}`,
+      `Production (${row.production_qty} pc): AED ${row.production_amount.toFixed(2)}`,
+      `Total Earned: AED ${row.total_amount.toFixed(2)}`,
+      `Mat Issue: − AED ${row.mat_issue_amount.toFixed(2)}`,
+      `Already Paid: − AED ${row.paid_amount.toFixed(2)}`,
+      `Pending Balance: AED ${pendingBalance.toFixed(2)}`,
+    )
+    return lines.join('\n')
   }
 
   const downloadInvoicePDF = (inv: Invoice) => {
@@ -118,12 +195,18 @@ export default function Report() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
           <div>
             <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Reports</p>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Monthly Report</h1>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>{selectedDate ? 'Daily Report' : 'Monthly Report'}</h1>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <select className="field" style={{ width: 'auto' }} value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
+            <select className="field" style={{ width: 'auto' }} value={selectedMonth} disabled={!!selectedDate}
+              onChange={e => setSelectedMonth(parseInt(e.target.value))}>
               {MONTHS.map((m,i) => <option key={i} value={i+1}>{m}</option>)}
             </select>
+            <input type="date" className="field" style={{ width: 'auto' }} value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)} />
+            {selectedDate && (
+              <button onClick={() => setSelectedDate('')} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>✕</button>
+            )}
             <select className="field" style={{ width: 'auto' }} value={selectedTailor} onChange={e => setSelectedTailor(e.target.value)}>
               <option value="">All Tailors</option>
               {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
@@ -137,7 +220,7 @@ export default function Report() {
         {/* Summary */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
           {[
-            { label: 'Month',         value: MONTHS[selectedMonth-1], color: '#1e293b' },
+            { label: selectedDate ? 'Date' : 'Month', value: periodLabel, color: '#1e293b' },
             { label: 'Total Pieces',  value: totalPieces,             color: '#2563eb' },
             { label: 'Total Amount',  value: `AED ${totalAmount}`,    color: '#16a34a' },
           ].map(s => (
@@ -166,23 +249,51 @@ export default function Report() {
                   <th>Mat Issue (DR)</th>
                   <th>Paid (DR)</th>
                   <th>Balance</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {jobSummary.map(row => (
-                  <tr key={row.tailor_id}>
-                    <td>
-                      <span className="badge badge-blue" style={{ marginRight: 6 }}>{row.tailor_code}</span>
-                      <span style={{ color: '#6b7280', fontSize: 12 }}>{row.tailor_name}</span>
-                    </td>
-                    <td style={{ color: '#2563eb', fontWeight: 500 }}>AED {row.shop_amount.toFixed(2)}</td>
-                    <td style={{ color: '#0891b2', fontWeight: 500 }}>AED {row.order_amount.toFixed(2)}</td>
-                    <td style={{ color: '#7c3aed', fontWeight: 500 }}>AED {row.production_amount.toFixed(2)}</td>
-                    <td style={{ color: '#d97706', fontWeight: 500 }}>AED {row.mat_issue_amount.toFixed(2)}</td>
-                    <td style={{ color: '#dc2626', fontWeight: 500 }}>AED {row.paid_amount.toFixed(2)}</td>
-                    <td style={{ color: row.balance >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 14 }}>AED {row.balance.toFixed(2)}</td>
-                  </tr>
-                ))}
+                {jobSummary.map(row => {
+                  const phone = getTailorPhone(row.tailor_code)?.replace(/\D/g, '')
+                  const waMsg = encodeURIComponent(buildStatementText(row))
+                  return (
+                    <tr key={row.tailor_id}>
+                      <td>
+                        <span className="badge badge-blue" style={{ marginRight: 6 }}>{row.tailor_code}</span>
+                        <span style={{ color: '#6b7280', fontSize: 12 }}>{row.tailor_name}</span>
+                      </td>
+                      <td style={{ color: '#2563eb', fontWeight: 500 }}>AED {row.shop_amount.toFixed(2)}</td>
+                      <td style={{ color: '#0891b2', fontWeight: 500 }}>AED {row.order_amount.toFixed(2)}</td>
+                      <td style={{ color: '#7c3aed', fontWeight: 500 }}>AED {row.production_amount.toFixed(2)}</td>
+                      <td style={{ color: '#d97706', fontWeight: 500 }}>AED {row.mat_issue_amount.toFixed(2)}</td>
+                      <td style={{ color: '#dc2626', fontWeight: 500 }}>AED {row.paid_amount.toFixed(2)}</td>
+                      <td style={{ color: row.balance >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 14 }}>AED {row.balance.toFixed(2)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button onClick={() => downloadTailorStatementPDF(row)} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>
+                            PDF
+                          </button>
+                          {phone ? (
+                            <a href={`https://wa.me/${phone}?text=${waMsg}`} target="_blank" rel="noreferrer"
+                              title="Send statement via WhatsApp"
+                              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: '#dcfce7', border: '1.5px solid #86efac', cursor: 'pointer', textDecoration: 'none', flexShrink: 0 }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="#16a34a">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                              </svg>
+                            </a>
+                          ) : (
+                            <span title="No phone saved for this tailor"
+                              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, background: '#f1f5f9', border: '1.5px solid #e2e8f0', flexShrink: 0, opacity: 0.45 }}>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="#94a3b8">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                              </svg>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
               {jobSummary.length > 0 && (
                 <tfoot>
@@ -194,6 +305,7 @@ export default function Report() {
                     <td>AED {jobSummary.reduce((s,r) => s+r.mat_issue_amount, 0).toFixed(2)}</td>
                     <td>AED {jobSummary.reduce((s,r) => s+r.paid_amount, 0).toFixed(2)}</td>
                     <td>AED {jobSummary.reduce((s,r) => s+r.balance, 0).toFixed(2)}</td>
+                    <td />
                   </tr>
                 </tfoot>
               )}

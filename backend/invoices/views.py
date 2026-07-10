@@ -220,7 +220,9 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def tailor_summary(self, request):
+        date = request.query_params.get('date')
         month = request.query_params.get('month')
+        period = bool(date or month)
 
         job_qs  = JobInvoice.objects.select_related('tailor').all()
         order_qs = TailorOrder.objects.select_related('tailor').all()
@@ -228,19 +230,25 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
         mat_qs   = MaterialIssue.objects.select_related('tailor').all()
         pay_qs   = Payment.objects.select_related('tailor').all()
 
-        if month:
+        if date:
+            job_qs   = job_qs.filter(date=date)
+            order_qs = order_qs.filter(date=date)
+            prod_qs  = prod_qs.filter(date=date)
+            mat_qs   = mat_qs.filter(date=date)
+            pay_qs   = pay_qs.filter(date=date)
+        elif month:
             job_qs   = job_qs.filter(date__month=month)
             order_qs = order_qs.filter(date__month=month)
             prod_qs  = prod_qs.filter(date__month=month)
             mat_qs   = mat_qs.filter(date__month=month)
             pay_qs   = pay_qs.filter(date__month=month)
 
-        # Opening balance is a one-time carry-forward, not a per-month figure —
-        # only include it in the all-time view, never in a month-filtered one.
+        # Opening balance is a one-time carry-forward, not a per-period figure —
+        # only include it in the all-time view, never in a date/month-filtered one.
         def _new(tailor):
             return {
                 'tailor_id': tailor.id, 'tailor_code': tailor.code, 'tailor_name': tailor.name,
-                'opening_balance': 0.0 if month else float(tailor.opening_balance),
+                'opening_balance': 0.0 if period else float(tailor.opening_balance),
                 'shop_amount': 0.0, 'shop_qty': 0,
                 'order_amount': 0.0, 'order_qty': 0,
                 'production_amount': 0.0, 'production_qty': 0,
@@ -250,7 +258,7 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
 
         by_tailor: dict = {}
 
-        if not month:
+        if not period:
             for t in Tailor.objects.filter(opening_balance__gt=0):
                 by_tailor[t.id] = _new(t)
 
