@@ -235,9 +235,12 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
             mat_qs   = mat_qs.filter(date__month=month)
             pay_qs   = pay_qs.filter(date__month=month)
 
+        # Opening balance is a one-time carry-forward, not a per-month figure —
+        # only include it in the all-time view, never in a month-filtered one.
         def _new(tailor):
             return {
                 'tailor_id': tailor.id, 'tailor_code': tailor.code, 'tailor_name': tailor.name,
+                'opening_balance': 0.0 if month else float(tailor.opening_balance),
                 'shop_amount': 0.0, 'shop_qty': 0,
                 'order_amount': 0.0, 'order_qty': 0,
                 'production_amount': 0.0, 'production_qty': 0,
@@ -246,6 +249,10 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
             }
 
         by_tailor: dict = {}
+
+        if not month:
+            for t in Tailor.objects.filter(opening_balance__gt=0):
+                by_tailor[t.id] = _new(t)
 
         for j in job_qs:
             tid = j.tailor.id
@@ -278,7 +285,8 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
         result = []
         for data in by_tailor.values():
             data['total_amount'] = data['shop_amount'] + data['order_amount'] + data['production_amount']
-            data['balance']      = data['total_amount'] - data['mat_issue_amount'] - data['paid_amount']
+            data['balance']      = (data['opening_balance'] + data['total_amount']
+                                     - data['mat_issue_amount'] - data['paid_amount'])
             result.append(data)
 
         return Response(sorted(result, key=lambda x: x['tailor_code']))

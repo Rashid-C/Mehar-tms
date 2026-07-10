@@ -55,6 +55,7 @@ export interface Tailor {
   name: string
   code: string
   phone: string
+  opening_balance: number
 }
 
 export interface Invoice {
@@ -83,6 +84,7 @@ export default api
 export const getTailors = (params?: object) => api.get<Paginated<Tailor>>('/tailors/', { params })
 export const createTailor = (data: object) => api.post<Tailor>('/tailors/', data)
 export const updateTailor = (id: number, data: object) => api.put<Tailor>(`/tailors/${id}/`, data)
+export const patchTailor = (id: number, data: object) => api.patch<Tailor>(`/tailors/${id}/`, data)
 export const deleteTailor = (id: number) => api.delete(`/tailors/${id}/`)
 export const getInvoices = (params?: object) => api.get<Invoice[]>('/invoices/', { params })
 export const getSummary = (params?: object) => api.get<Summary>('/invoices/summary/', { params })
@@ -214,6 +216,7 @@ export interface TailorJobSummary {
   tailor_id: number
   tailor_code: string
   tailor_name: string
+  opening_balance: number
   shop_amount: number
   shop_qty: number
   order_amount: number

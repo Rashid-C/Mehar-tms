@@ -3,7 +3,7 @@ from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Paym
 
 @admin.register(Tailor)
 class TailorAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'phone', 'created_at']
+    list_display = ['code', 'name', 'phone', 'opening_balance', 'created_at']
     search_fields = ['code', 'name']
 
 @admin.register(Invoice)

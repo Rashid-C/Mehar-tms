@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
-  getTailors, createTailor, Tailor,
+  getTailors, createTailor, patchTailor, Tailor,
   getJobInvoices, createJobInvoice, updateJobInvoice, deleteJobInvoice, JobInvoice, getNextInvNo,
   getTailorOrders, createTailorOrder, updateTailorOrder, deleteTailorOrder, TailorOrder, getNextOrderInvNo,
   getPayments, createPayment, updatePayment, deletePayment, Payment,
@@ -72,6 +72,8 @@ export default function JobInvoicePage() {
   const [payAmount, setPayAmount] = useState('')
   const [payRemarks, setPayRemarks] = useState('')
   const [tailorSummary, setTailorSummary] = useState<TailorJobSummary[]>([])
+  const [obDraft, setObDraft] = useState('')
+  const [savingOb, setSavingOb] = useState(false)
 
   // ── MAT ISSUE ────────────────────────────────────────────────────────
   const [matRecords, setMatRecords] = useState<MaterialIssue[]>([])
@@ -869,7 +871,12 @@ export default function JobInvoicePage() {
                       </p>
                     ) : (
                       <select className="field" value={payTailor}
-                        onChange={e => { setPayTailor(Number(e.target.value)); setPayAmount('') }} required>
+                        onChange={e => {
+                          const id = Number(e.target.value)
+                          setPayTailor(id); setPayAmount('')
+                          const t = tailors.find(x => x.id === id)
+                          setObDraft(t ? String(parseFloat(String(t.opening_balance)) || 0) : '')
+                        }} required>
                         <option value="">— Select tailor —</option>
                         {tailorSummary.map(s => (
                           <option key={s.tailor_id} value={s.tailor_id}>
@@ -880,6 +887,33 @@ export default function JobInvoicePage() {
                     )}
                   </div>
 
+                  {/* Opening balance — editable per tailor */}
+                  {payTailor !== '' && (
+                    <div className="rounded-xl px-4 py-3 flex items-end gap-2"
+                      style={{ background: '#f8faff', border: '1px solid #e2e8f0' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Opening Balance (AED)</label>
+                        <input type="number" step="0.01" className="field" value={obDraft}
+                          onChange={e => setObDraft(e.target.value)} placeholder="0.00" />
+                      </div>
+                      <button type="button" disabled={savingOb} className="btn-ghost" style={{ padding: '9px 14px', fontSize: 12, whiteSpace: 'nowrap' }}
+                        onClick={async () => {
+                          setSavingOb(true)
+                          try {
+                            const value = parseFloat(obDraft) || 0
+                            const res = await patchTailor(Number(payTailor), { opening_balance: value })
+                            setTailors(prev => prev.map(t => t.id === res.data.id ? res.data : t))
+                            await loadSummary()
+                            notify('Opening balance updated')
+                          } catch {
+                            fail('Failed to update opening balance')
+                          } finally { setSavingOb(false) }
+                        }}>
+                        {savingOb ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  )}
+
                   {/* Tailor earnings summary */}
                   {payTailor !== '' && (() => {
                     const s = tailorSummary.find(x => x.tailor_id === Number(payTailor))
@@ -887,6 +921,14 @@ export default function JobInvoicePage() {
                     return (
                       <div className="rounded-xl px-4 py-3 flex flex-col gap-1.5"
                         style={{ background: '#f8faff', border: '1px solid #e2e8f0' }}>
+                        {s.opening_balance !== 0 && (
+                          <div className="flex justify-between text-xs" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '2px' }}>
+                            <span style={{ color: '#94a3b8' }}>Opening Balance</span>
+                            <span style={{ color: s.opening_balance > 0 ? '#0f766e' : '#dc2626', fontWeight: 700 }}>
+                              {s.opening_balance > 0 ? '' : '− '}AED {Math.abs(s.opening_balance).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-xs">
                           <span style={{ color: '#94a3b8' }}>Shop <span style={{ fontWeight: 700, color: '#475569' }}>({s.shop_qty} pc)</span></span>
                           <span style={{ color: '#2563eb' }}>AED {s.shop_amount.toFixed(2)}</span>

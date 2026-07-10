@@ -12,9 +12,9 @@ export default function TailorsPage() {
   const [saving, setSaving]   = useState(false)
   const [error, setError]     = useState('')
   const [success, setSuccess] = useState('')
-  const [form, setForm]       = useState({ name: '', code: '', phone: '' })
+  const [form, setForm]       = useState({ name: '', code: '', phone: '', opening_balance: '' })
   const [editId, setEditId]   = useState<number | null>(null)
-  const [editForm, setEditForm] = useState({ name: '', code: '', phone: '' })
+  const [editForm, setEditForm] = useState({ name: '', code: '', phone: '', opening_balance: '' })
 
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1
 
@@ -33,9 +33,9 @@ export default function TailorsPage() {
     if (!form.name || !form.code) { fail('Name and Code are required'); return }
     setSaving(true)
     try {
-      await createTailor({ ...form, code: form.code.toUpperCase() })
+      await createTailor({ ...form, code: form.code.toUpperCase(), opening_balance: form.opening_balance || 0 })
       notify(`Tailor "${form.code.toUpperCase()}" added`)
-      setForm({ name: '', code: '', phone: '' })
+      setForm({ name: '', code: '', phone: '', opening_balance: '' })
       load(page)
     } catch (err: unknown) {
       const data = (err as { response?: { data?: Record<string, string[]> } })?.response?.data
@@ -46,7 +46,7 @@ export default function TailorsPage() {
 
   const openEdit = (t: Tailor) => {
     setEditId(t.id)
-    setEditForm({ name: t.name, code: t.code, phone: t.phone || '' })
+    setEditForm({ name: t.name, code: t.code, phone: t.phone || '', opening_balance: String(t.opening_balance ?? 0) })
     setError(''); setSuccess('')
   }
 
@@ -55,7 +55,7 @@ export default function TailorsPage() {
     if (!editForm.name || !editForm.code) { fail('Name and Code are required'); return }
     setSaving(true)
     try {
-      await updateTailor(editId, { ...editForm, code: editForm.code.toUpperCase() })
+      await updateTailor(editId, { ...editForm, code: editForm.code.toUpperCase(), opening_balance: editForm.opening_balance || 0 })
       notify('Tailor updated')
       setEditId(null)
       load(page)
@@ -104,7 +104,7 @@ export default function TailorsPage() {
             <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Add New Tailor</span>
           </div>
           <div style={{ padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={lbl}>Full Name *</label>
                 <input className="field" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Muhammad Javed" />
@@ -116,6 +116,11 @@ export default function TailorsPage() {
               <div>
                 <label style={lbl}>Phone</label>
                 <input className="field" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="+971 50 000 0000" />
+              </div>
+              <div>
+                <label style={lbl}>Opening Balance (AED)</label>
+                <input type="number" step="0.01" className="field" value={form.opening_balance}
+                  onChange={e => setForm(p => ({ ...p, opening_balance: e.target.value }))} placeholder="0.00" />
               </div>
             </div>
             <button onClick={handleAdd} disabled={saving} className="btn-gold">
@@ -140,15 +145,17 @@ export default function TailorsPage() {
                   <th>Code</th>
                   <th>Name</th>
                   <th>Phone</th>
+                  <th>Opening Balance</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {tailors.map(t => (
-                  editId === t.id ? (
+                {tailors.map(t => {
+                  const ob = parseFloat(String(t.opening_balance)) || 0
+                  return editId === t.id ? (
                     <tr key={t.id}>
-                      <td colSpan={4} style={{ padding: '12px 14px', background: '#f5f8ff' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 10, alignItems: 'end' }}>
+                      <td colSpan={5} style={{ padding: '12px 14px', background: '#f5f8ff' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 10, alignItems: 'end' }}>
                           <div>
                             <label style={lbl}>Name *</label>
                             <input className="field" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
@@ -160,6 +167,10 @@ export default function TailorsPage() {
                           <div>
                             <label style={lbl}>Phone</label>
                             <input className="field" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
+                          </div>
+                          <div>
+                            <label style={lbl}>Opening Balance</label>
+                            <input type="number" step="0.01" className="field" value={editForm.opening_balance} onChange={e => setEditForm(p => ({ ...p, opening_balance: e.target.value }))} />
                           </div>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button onClick={handleUpdate} disabled={saving} className="btn-gold" style={{ whiteSpace: 'nowrap' }}>
@@ -175,6 +186,9 @@ export default function TailorsPage() {
                       <td><span className="badge badge-blue">{t.code}</span></td>
                       <td style={{ fontWeight: 500, color: '#1e293b' }}>{t.name}</td>
                       <td style={{ color: '#6b7280' }}>{t.phone || '—'}</td>
+                      <td style={{ color: ob > 0 ? '#0f766e' : ob < 0 ? '#dc2626' : '#9ca3af', fontWeight: 600 }}>
+                        AED {ob.toFixed(2)}
+                      </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                           <button onClick={() => openEdit(t)} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>Edit</button>
@@ -183,7 +197,7 @@ export default function TailorsPage() {
                       </td>
                     </tr>
                   )
-                ))}
+                })}
               </tbody>
             </table>
           )}
