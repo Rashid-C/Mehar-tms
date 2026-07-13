@@ -258,12 +258,14 @@ export default function Report() {
             <p style={{ textAlign: 'center', padding: '32px', color: '#9ca3af', fontSize: 13 }}>No job invoice records for this month.</p>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-            <table className="z-table" style={{ minWidth: 760 }}>
+            <table className="z-table" style={{ minWidth: 920 }}>
               <thead>
                 <tr>
                   <th>Tailor</th>
-                  <th>Shop (CR)</th>
-                  <th>Order (CR)</th>
+                  <th>Shop (Pcs)</th>
+                  <th>Shop (Amount)</th>
+                  <th>Order (Pcs)</th>
+                  <th>Order (Amount)</th>
                   <th>Production (CR)</th>
                   <th>Mat Issue (DR)</th>
                   <th>Paid (DR)</th>
@@ -279,12 +281,10 @@ export default function Report() {
                         <span className="badge badge-blue" style={{ marginRight: 6 }}>{row.tailor_code}</span>
                         <span style={{ color: '#6b7280', fontSize: 12 }}>{row.tailor_name}</span>
                       </td>
-                      <td style={{ color: '#2563eb', fontWeight: 500 }}>
-                        AED {row.shop_amount.toFixed(2)} <span style={{ color: '#475569', fontWeight: 700, fontSize: 12 }}>({row.shop_qty} pc)</span>
-                      </td>
-                      <td style={{ color: '#0891b2', fontWeight: 500 }}>
-                        AED {row.order_amount.toFixed(2)} <span style={{ color: '#475569', fontWeight: 700, fontSize: 12 }}>({row.order_qty} qty)</span>
-                      </td>
+                      <td style={{ color: '#475569', fontWeight: 700 }}>{row.shop_qty} pc</td>
+                      <td style={{ color: '#2563eb', fontWeight: 500 }}>AED {row.shop_amount.toFixed(2)}</td>
+                      <td style={{ color: '#475569', fontWeight: 700 }}>{row.order_qty} qty</td>
+                      <td style={{ color: '#0891b2', fontWeight: 500 }}>AED {row.order_amount.toFixed(2)}</td>
                       <td style={{ color: '#7c3aed', fontWeight: 500 }}>AED {row.production_amount.toFixed(2)}</td>
                       <td style={{ color: '#d97706', fontWeight: 500 }}>AED {row.mat_issue_amount.toFixed(2)}</td>
                       <td style={{ color: '#dc2626', fontWeight: 500 }}>AED {row.paid_amount.toFixed(2)}</td>
@@ -315,7 +315,9 @@ export default function Report() {
                 <tfoot>
                   <tr>
                     <td>Total</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.shop_qty, 0)} pc</td>
                     <td>AED {jobSummary.reduce((s,r) => s+r.shop_amount, 0).toFixed(2)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.order_qty, 0)} qty</td>
                     <td>AED {jobSummary.reduce((s,r) => s+r.order_amount, 0).toFixed(2)}</td>
                     <td>AED {jobSummary.reduce((s,r) => s+r.production_amount, 0).toFixed(2)}</td>
                     <td>AED {jobSummary.reduce((s,r) => s+r.mat_issue_amount, 0).toFixed(2)}</td>
