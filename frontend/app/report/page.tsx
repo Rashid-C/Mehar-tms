@@ -146,20 +146,33 @@ export default function Report() {
 
     setSharingId(row.tailor_id)
     try {
-      const file = new File([doc.output('blob')], filename, { type: 'application/pdf' })
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: `Statement — ${row.tailor_code}`, text })
-          return
-        } catch (err) {
-          if ((err as Error)?.name === 'AbortError') return
+      // On mobile, WhatsApp registers as a proper OS share target, so the native share
+      // sheet hands it the PDF directly, ready to send. Desktop's share sheet only lists
+      // apps that implement the Windows/macOS Share contract — desktop WhatsApp doesn't,
+      // so it never appears there no matter what — going straight to WhatsApp Web is the
+      // only path that actually works there.
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      if (isMobile) {
+        const file = new File([doc.output('blob')], filename, { type: 'application/pdf' })
+        if (navigator.canShare?.({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: `Statement — ${row.tailor_code}`, text })
+            return
+          } catch (err) {
+            if ((err as Error)?.name === 'AbortError') return
+          }
         }
       }
-      // Fallback (e.g. desktop browsers without file-share support): download the PDF
-      // so it can be attached manually, and open WhatsApp with the text pre-filled.
+      // Desktop (or mobile share failed/unsupported): download the PDF and open the
+      // tailor's WhatsApp Web chat so it can be attached with one click. Without a phone
+      // number wa.me has no chat to open — it silently lands in "Message yourself" instead,
+      // which is more confusing than useful, so skip it and say why.
+      if (!phone) {
+        alert(`No phone number saved for ${row.tailor_name} (${row.tailor_code}). Add one on the Tailors page to send via WhatsApp — or use the PDF button to download and share it another way.`)
+        return
+      }
       doc.save(filename)
-      const waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`
-      window.open(waUrl, '_blank')
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank')
     } finally { setSharingId(null) }
   }
 
