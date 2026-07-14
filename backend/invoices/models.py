@@ -122,6 +122,31 @@ class TailorOrder(models.Model):
         ordering = ['-date', '-created_at']
 
 
+class Item(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=30, unique=True)  # SKU
+    category = models.CharField(max_length=50, blank=True)
+    size = models.CharField(max_length=20, blank=True)
+    color = models.CharField(max_length=30, blank=True)
+    base_unit = models.CharField(max_length=20, default='pcs')
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    price_includes_tax = models.BooleanField(default=False)
+    tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    track_inventory = models.BooleanField(default=False)
+    opening_stock = models.PositiveIntegerField(null=True, blank=True)
+    warehouse = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.code} — {self.name}"
+
+    class Meta:
+        ordering = ['name']
+
+
 class MaterialIssue(models.Model):
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='material_issues')
     date = models.DateField()

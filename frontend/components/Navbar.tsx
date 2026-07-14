@@ -6,6 +6,7 @@ import Image from 'next/image'
 
 const modules = [
   { href: '/job-invoice', label: 'Production'  },
+  { href: '/items',       label: 'Items'       },
   { href: '/tailors',     label: 'Tailors'     },
   { href: '/ratesheet',   label: 'Rate Sheet'  },
   { href: '/stitching',   label: 'Stitching'   },

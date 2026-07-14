@@ -5,7 +5,7 @@ import {
   Tailor,
 } from '@/lib/api'
 import { lbl, today } from '../shared'
-import TailorSelector from './TailorSelector'
+import TailorSelector from '@/components/TailorSelector'
 import RowActions from '@/components/RowActions'
 
 export default function OrderTab({ tailors, onTailorCreated, notify, fail }: {

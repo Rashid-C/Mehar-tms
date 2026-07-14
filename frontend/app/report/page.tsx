@@ -276,13 +276,13 @@ export default function Report() {
                 <tr>
                   <th>Tailor</th>
                   <th>Shop (Pcs)</th>
-                  <th>Shop (Amount)</th>
+                  <th>Shop (AED)</th>
                   <th>Order (Pcs)</th>
-                  <th>Order (Amount)</th>
-                  <th>Production (CR)</th>
-                  <th>Mat Issue (DR)</th>
-                  <th>Paid (DR)</th>
-                  <th>Balance</th>
+                  <th>Order (AED)</th>
+                  <th>Production (AED)</th>
+                  <th>Mat Issue (AED)</th>
+                  <th>Paid (AED)</th>
+                  <th>Balance (AED)</th>
                   <th></th>
                 </tr>
               </thead>
@@ -294,14 +294,14 @@ export default function Report() {
                         <span className="badge badge-blue" style={{ marginRight: 6 }}>{row.tailor_code}</span>
                         <span style={{ color: '#6b7280', fontSize: 12 }}>{row.tailor_name}</span>
                       </td>
-                      <td style={{ color: '#475569', fontWeight: 700 }}>{row.shop_qty} pc</td>
-                      <td style={{ color: '#2563eb', fontWeight: 500 }}>AED {row.shop_amount.toFixed(2)}</td>
-                      <td style={{ color: '#475569', fontWeight: 700 }}>{row.order_qty} qty</td>
-                      <td style={{ color: '#0891b2', fontWeight: 500 }}>AED {row.order_amount.toFixed(2)}</td>
-                      <td style={{ color: '#7c3aed', fontWeight: 500 }}>AED {row.production_amount.toFixed(2)}</td>
-                      <td style={{ color: '#d97706', fontWeight: 500 }}>AED {row.mat_issue_amount.toFixed(2)}</td>
-                      <td style={{ color: '#dc2626', fontWeight: 500 }}>AED {row.paid_amount.toFixed(2)}</td>
-                      <td style={{ color: row.balance >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 14 }}>AED {row.balance.toFixed(2)}</td>
+                      <td style={{ color: '#475569', fontWeight: 700 }}>{row.shop_qty}</td>
+                      <td style={{ color: '#2563eb', fontWeight: 500 }}>{row.shop_amount.toFixed(2)}</td>
+                      <td style={{ color: '#475569', fontWeight: 700 }}>{row.order_qty}</td>
+                      <td style={{ color: '#0891b2', fontWeight: 500 }}>{row.order_amount.toFixed(2)}</td>
+                      <td style={{ color: '#7c3aed', fontWeight: 500 }}>{row.production_amount.toFixed(2)}</td>
+                      <td style={{ color: '#d97706', fontWeight: 500 }}>{row.mat_issue_amount.toFixed(2)}</td>
+                      <td style={{ color: '#dc2626', fontWeight: 500 }}>{row.paid_amount.toFixed(2)}</td>
+                      <td style={{ color: row.balance >= 0 ? '#16a34a' : '#dc2626', fontWeight: 700, fontSize: 14 }}>{row.balance.toFixed(2)}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                           <button onClick={() => downloadTailorStatementPDF(row)} className="btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}>
@@ -328,14 +328,14 @@ export default function Report() {
                 <tfoot>
                   <tr>
                     <td>Total</td>
-                    <td>{jobSummary.reduce((s,r) => s+r.shop_qty, 0)} pc</td>
-                    <td>AED {jobSummary.reduce((s,r) => s+r.shop_amount, 0).toFixed(2)}</td>
-                    <td>{jobSummary.reduce((s,r) => s+r.order_qty, 0)} qty</td>
-                    <td>AED {jobSummary.reduce((s,r) => s+r.order_amount, 0).toFixed(2)}</td>
-                    <td>AED {jobSummary.reduce((s,r) => s+r.production_amount, 0).toFixed(2)}</td>
-                    <td>AED {jobSummary.reduce((s,r) => s+r.mat_issue_amount, 0).toFixed(2)}</td>
-                    <td>AED {jobSummary.reduce((s,r) => s+r.paid_amount, 0).toFixed(2)}</td>
-                    <td>AED {jobSummary.reduce((s,r) => s+r.balance, 0).toFixed(2)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.shop_qty, 0)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.shop_amount, 0).toFixed(2)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.order_qty, 0)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.order_amount, 0).toFixed(2)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.production_amount, 0).toFixed(2)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.mat_issue_amount, 0).toFixed(2)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.paid_amount, 0).toFixed(2)}</td>
+                    <td>{jobSummary.reduce((s,r) => s+r.balance, 0).toFixed(2)}</td>
                     <td />
                   </tr>
                 </tfoot>

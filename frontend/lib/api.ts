@@ -247,3 +247,27 @@ export const deleteMaterialIssue = (id: number) => api.delete(`/material-issues/
 
 export const getTailorJobSummary = (params?: object) =>
   api.get<TailorJobSummary[]>('/job-invoices/tailor_summary/', { params })
+
+export interface Item {
+  id: number
+  name: string
+  code: string
+  category: string
+  size: string
+  color: string
+  base_unit: string
+  purchase_price: number
+  selling_price: number
+  price_includes_tax: boolean
+  tax_percent: number
+  discount_percent: number
+  track_inventory: boolean
+  opening_stock: number | null
+  warehouse: string
+  description: string
+}
+
+export const getItems = (params?: object) => api.get<Item[]>('/items/', { params })
+export const createItem = (data: object) => api.post<Item>('/items/', data)
+export const updateItem = (id: number, data: object) => api.put<Item>(`/items/${id}/`, data)
+export const deleteItem = (id: number) => api.delete(`/items/${id}/`)

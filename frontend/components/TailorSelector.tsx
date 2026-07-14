@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { createTailor, Tailor } from '@/lib/api'
-import { lbl } from '../shared'
+
+const lbl: React.CSSProperties = { color: '#374151', fontSize: 12, fontWeight: 500 }
 
 export default function TailorSelector({ tailors, value, onChange, onTailorCreated, onError }: {
   tailors: Tailor[]

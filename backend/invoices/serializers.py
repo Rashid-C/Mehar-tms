@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RateSheet, Tailor, Invoice, ShopStitching, TailorOrder, Payment, JobInvoice, MaterialIssue
+from .models import RateSheet, Tailor, Invoice, ShopStitching, TailorOrder, Payment, JobInvoice, MaterialIssue, Item
 
 class TailorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -72,3 +72,9 @@ class MaterialIssueSerializer(serializers.ModelSerializer):
         model = MaterialIssue
         fields = '__all__'
         read_only_fields = ['tailor_code', 'tailor_name']
+
+
+class ItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = '__all__'

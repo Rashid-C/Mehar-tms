@@ -5,7 +5,7 @@ import {
   lookupRateSheet, Tailor,
 } from '@/lib/api'
 import { lbl, today, MODEL_NO_RE, PAGE_SIZE } from '../shared'
-import TailorSelector from './TailorSelector'
+import TailorSelector from '@/components/TailorSelector'
 import RowActions from '@/components/RowActions'
 
 export default function ShopTab({ tailors, onTailorCreated, notify, fail }: {

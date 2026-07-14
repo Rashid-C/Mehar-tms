@@ -4,12 +4,12 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Sum, Max, Q
 import re
-from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Payment, JobInvoice, MaterialIssue
+from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Payment, JobInvoice, MaterialIssue, Item
 from .serializers import (
     TailorSerializer, InvoiceSerializer, RateSheetSerializer,
     ShopStitchingSerializer,
     TailorOrderSerializer, PaymentSerializer, JobInvoiceSerializer,
-    MaterialIssueSerializer,
+    MaterialIssueSerializer, ItemSerializer,
 )
 
 
@@ -389,4 +389,19 @@ class MaterialIssueViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tailor__code=tailor)
         if date:
             queryset = queryset.filter(date=date)
+        return queryset
+
+
+class ItemViewSet(viewsets.ModelViewSet):
+    queryset = Item.objects.all()
+    serializer_class = ItemSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'code', 'category']
+    ordering_fields = ['name', 'code', 'selling_price', 'created_at']
+
+    def get_queryset(self):
+        queryset = Item.objects.all()
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category=category)
         return queryset
