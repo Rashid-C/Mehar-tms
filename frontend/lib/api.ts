@@ -122,6 +122,7 @@ export const lookupRateSheet = (md_no: string) => api.get<{
 
 export interface ShopStitching {
   id: number
+  ref_no: string | null
   tailor: number
   tailor_code: string
   tailor_name: string
@@ -138,6 +139,7 @@ export interface ShopStitching {
 
 export const getStitchings = (params?: object) => api.get<ShopStitching[]>('/stitching/', { params })
 export const createStitching = (data: object) => api.post('/stitching/', data)
+export const getNextStitchingRefNo = () => api.get<{ next_ref_no: string }>('/stitching/next_ref_no/')
 export const updateStitching = (id: number, data: object) => api.put(`/stitching/${id}/`, data)
 export const deleteStitching = (id: number) => api.delete(`/stitching/${id}/`)
 export const getStitchingSummary = (params?: object) => api.get<{

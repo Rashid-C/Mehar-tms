@@ -58,6 +58,7 @@ class RateSheet(models.Model):
         ordering = ['md_no']
 
 class ShopStitching(models.Model):
+    ref_no = models.CharField(max_length=20, unique=True, null=True, blank=True)
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitchings')
     md_no = models.CharField(max_length=20)
     date = models.DateField()

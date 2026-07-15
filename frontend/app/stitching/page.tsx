@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getStitchings, createStitching, deleteStitching, getTailors, getStitchingSummary, lookupRateSheet, ShopStitching, Tailor } from '@/lib/api'
+import { getStitchings, createStitching, deleteStitching, getTailors, getStitchingSummary, lookupRateSheet, getNextStitchingRefNo, getItems, ShopStitching, Tailor, Item } from '@/lib/api'
 
 const EMPTY = { md_no: '', tailor: '', date: '', pc_count: '', rate: '', cloth: '', mtr: '', inv_no: '', remarks: '' }
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
@@ -16,6 +16,9 @@ export default function StitchingPage() {
   const [success, setSuccess]     = useState('')
   const [filterMonth, setFilterMonth]   = useState(new Date().getMonth() + 1)
   const [filterTailor, setFilterTailor] = useState('')
+  const [refNo, setRefNo]               = useState('')
+  const [productionItems, setProductionItems] = useState<Item[]>([])
+  const [showClothList, setShowClothList] = useState(false)
 
   const fetchData = async () => {
     const params: Record<string, string | number> = { month: filterMonth }
@@ -28,7 +31,16 @@ export default function StitchingPage() {
     setTailors(tailorRes.data.results)
   }
 
+  const fetchNextRefNo = async () => {
+    const res = await getNextStitchingRefNo()
+    setRefNo(res.data.next_ref_no)
+  }
+
   useEffect(() => { fetchData() }, [filterMonth, filterTailor])
+  useEffect(() => {
+    fetchNextRefNo()
+    getItems({ item_type: 'production' }).then(r => setProductionItems(r.data))
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -53,13 +65,13 @@ export default function StitchingPage() {
     setLoading(true)
     try {
       await createStitching({
-        md_no: form.md_no, tailor: parseInt(form.tailor), date: form.date,
+        ref_no: refNo, md_no: form.md_no, tailor: parseInt(form.tailor), date: form.date,
         pc_count: parseInt(form.pc_count), rate: parseFloat(form.rate),
         cloth: form.cloth, mtr: form.mtr ? parseFloat(form.mtr) : null,
         inv_no: form.inv_no, remarks: form.remarks,
       })
-      setSuccess(`Stitching record added for MD ${form.md_no}`)
-      setForm(EMPTY); fetchData()
+      setSuccess(`Stitching record ${refNo} added for MD ${form.md_no}`)
+      setForm(EMPTY); fetchData(); fetchNextRefNo()
     } catch (err: unknown) {
       const e = err as { response?: { data?: unknown } }
       setError(e.response?.data ? JSON.stringify(e.response.data) : 'Something went wrong')
@@ -108,7 +120,12 @@ export default function StitchingPage() {
             {error   && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 12 }}>{error}</div>}
             {success && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 12 }}>{success}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={lbl}>Ref No</label>
+                <input className="field font-mono" value={refNo} readOnly
+                  style={{ color: '#0d9488', cursor: 'default', background: 'rgba(13,148,136,0.06)' }} />
+              </div>
               {[
                 { name: 'md_no',  label: 'MD No *', placeholder: '787',  type: 'text', onChange: handleMdNoChange },
                 { name: 'date',   label: 'Date *',  placeholder: '',     type: 'date', onChange: handleChange },
@@ -132,14 +149,42 @@ export default function StitchingPage() {
               {[
                 { name: 'pc_count', label: 'Pieces *',    placeholder: '12',      type: 'number' },
                 { name: 'rate',     label: 'Rate (AED) *', placeholder: '30',     type: 'number' },
-                { name: 'cloth',    label: 'Cloth',        placeholder: 'Cotton…', type: 'text' },
-                { name: 'mtr',      label: 'Mtr (Cloth)',  placeholder: '1.5',    type: 'number' },
               ].map(f => (
                 <div key={f.name}>
                   <label style={lbl}>{f.label}</label>
                   <input name={f.name} className="field" value={form[f.name as keyof typeof form]} onChange={handleChange} placeholder={f.placeholder} type={f.type} />
                 </div>
               ))}
+              <div style={{ position: 'relative' }}>
+                <label style={lbl}>Cloth</label>
+                <input name="cloth" className="field" value={form.cloth} onChange={handleChange}
+                  onFocus={() => setShowClothList(true)}
+                  onBlur={() => setTimeout(() => setShowClothList(false), 150)}
+                  placeholder="Cotton… or click for production items" type="text" autoComplete="off" />
+                {showClothList && productionItems.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', maxHeight: 200, overflowY: 'auto', zIndex: 20 }}>
+                    {productionItems
+                      .filter(it => !form.cloth || it.name.toLowerCase().includes(form.cloth.toLowerCase()))
+                      .map(it => (
+                        <button key={it.id} type="button"
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => { setForm(prev => ({ ...prev, cloth: it.name })); setShowClothList(false) }}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, color: '#374151', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                          {it.name} {it.code && <span style={{ color: '#94a3b8', fontSize: 11 }}>({it.code})</span>}
+                        </button>
+                      ))}
+                    {productionItems.filter(it => !form.cloth || it.name.toLowerCase().includes(form.cloth.toLowerCase())).length === 0 && (
+                      <div style={{ padding: '8px 12px', fontSize: 12, color: '#9ca3af' }}>No matching production items</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label style={lbl}>Mtr (Cloth)</label>
+                <input name="mtr" className="field" value={form.mtr} onChange={handleChange} placeholder="1.5" type="number" />
+              </div>
             </div>
 
             {autoTotal && (
@@ -176,6 +221,7 @@ export default function StitchingPage() {
           <table className="z-table">
             <thead>
               <tr>
+                <th>Ref No</th>
                 <th>Date</th>
                 <th>MD No</th>
                 <th>Tailor</th>
@@ -192,6 +238,7 @@ export default function StitchingPage() {
             <tbody>
               {records.map(r => (
                 <tr key={r.id}>
+                  <td style={{ fontWeight: 700, color: '#0d9488', fontFamily: 'monospace' }}>{r.ref_no || '—'}</td>
                   <td style={{ color: '#6b7280' }}>{r.date}</td>
                   <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{r.md_no}</td>
                   <td><span className="badge badge-blue">{r.tailor_code}</span></td>
@@ -211,7 +258,7 @@ export default function StitchingPage() {
             {records.length > 0 && (
               <tfoot>
                 <tr>
-                  <td colSpan={3}>Total</td>
+                  <td colSpan={4}>Total</td>
                   <td>{summary.total_pieces}</td>
                   <td />
                   <td>AED {summary.total_amount}</td>

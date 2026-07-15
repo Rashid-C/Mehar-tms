@@ -164,6 +164,18 @@ class ShopStitchingViewSet(viewsets.ModelViewSet):
             'total_records': queryset.count(),
         })
 
+    @action(detail=False, methods=['get'])
+    def next_ref_no(self, request):
+        existing = ShopStitching.objects.filter(
+            ref_no__startswith='ST'
+        ).values_list('ref_no', flat=True)
+        max_num = 0
+        for ref in existing:
+            m = re.match(r'^ST(\d+)$', ref or '')
+            if m:
+                max_num = max(max_num, int(m.group(1)))
+        return Response({'next_ref_no': f"ST{max_num + 1:03d}"})
+
 
 
 
@@ -402,6 +414,9 @@ class ItemViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Item.objects.all()
         category = self.request.query_params.get('category')
+        item_type = self.request.query_params.get('item_type')
         if category:
             queryset = queryset.filter(category=category)
+        if item_type:
+            queryset = queryset.filter(item_type=item_type)
         return queryset
