@@ -1,11 +1,16 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getItems, createItem, updateItem, deleteItem, Item } from '@/lib/api'
+import { getItems, createItem, updateItem, deleteItem, Item, ItemType } from '@/lib/api'
 
 const lbl: React.CSSProperties = { color: '#374151', fontSize: 12, fontWeight: 500 }
 const UNITS = ['pcs', 'kg', 'meter', 'box', 'dozen', 'liter', 'roll', 'pack']
+const ITEM_TYPES: { value: ItemType; label: string }[] = [
+  { value: 'selling', label: 'Selling Item' },
+  { value: 'production', label: 'Production Item' },
+]
 
 const emptyForm = {
+  item_type: '' as ItemType | '',
   name: '', code: '', category: '', size: '', color: '', base_unit: 'pcs',
   purchase_price: '', selling_price: '', price_includes_tax: false, tax_percent: '', discount_percent: '',
   track_inventory: false, opening_stock: '', warehouse: '', description: '',
@@ -21,6 +26,7 @@ export default function ItemsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState<ItemType | ''>('')
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
@@ -43,6 +49,7 @@ export default function ItemsPage() {
   const openCreate = () => { setForm(emptyForm); setEditingId(null); setModalError(''); setModalOpen(true) }
   const openEdit = (i: Item) => {
     setForm({
+      item_type: i.item_type,
       name: i.name, code: i.code, category: i.category || '', size: i.size || '', color: i.color || '',
       base_unit: i.base_unit || 'pcs',
       purchase_price: String(i.purchase_price), selling_price: String(i.selling_price),
@@ -57,9 +64,11 @@ export default function ItemsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!form.item_type) { setModalError('Please select an Item Type'); return }
     setSaving(true)
     try {
       const payload = {
+        item_type: form.item_type,
         name: form.name, code: form.code.toUpperCase(), category: form.category,
         size: form.size, color: form.color, base_unit: form.base_unit,
         purchase_price: parseFloat(form.purchase_price) || 0, selling_price: parseFloat(form.selling_price) || 0,
@@ -87,6 +96,7 @@ export default function ItemsPage() {
   const categories = Array.from(new Set(items.map(i => i.category).filter(Boolean))).sort()
 
   const filtered = items.filter(i => {
+    if (typeFilter && i.item_type !== typeFilter) return false
     if (categoryFilter && i.category !== categoryFilter) return false
     if (search) {
       const q = search.toLowerCase()
@@ -129,6 +139,10 @@ export default function ItemsPage() {
           </span>
           <input className="field" style={{ flex: '1 1 200px', minWidth: 0 }} placeholder="Search item, code, category…"
             value={search} onChange={e => setSearch(e.target.value)} />
+          <select className="field" style={{ width: 'auto' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value as ItemType | '')}>
+            <option value="">All Types</option>
+            {ITEM_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
           <select className="field" style={{ width: 'auto' }} value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
             <option value="">All Categories</option>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -150,6 +164,15 @@ export default function ItemsPage() {
               <div key={item.id} className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ minWidth: 0 }}>
+                    <span style={{
+                      display: 'inline-block', marginBottom: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px',
+                      color: item.item_type === 'selling' ? '#2563eb' : '#7c3aed',
+                      background: item.item_type === 'selling' ? '#eff6ff' : '#f5f3ff',
+                      border: `1px solid ${item.item_type === 'selling' ? '#bfdbfe' : '#ddd6fe'}`,
+                      borderRadius: 4, padding: '1px 6px',
+                    }}>
+                      {item.item_type === 'selling' ? 'Selling' : 'Production'}
+                    </span>
                     <p style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.name}
                     </p>
@@ -240,6 +263,23 @@ export default function ItemsPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Item Type *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {ITEM_TYPES.map(t => (
+                    <button key={t.value} type="button" onClick={() => setForm(p => ({ ...p, item_type: t.value }))}
+                      style={{
+                        padding: '10px 12px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        border: form.item_type === t.value ? '2px solid #0d9488' : '1px solid #d1d5db',
+                        background: form.item_type === t.value ? '#f0fdfa' : '#ffffff',
+                        color: form.item_type === t.value ? '#0d9488' : '#374151',
+                      }}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Item Name *</label>

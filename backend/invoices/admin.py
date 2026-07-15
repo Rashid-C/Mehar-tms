@@ -47,6 +47,6 @@ class PaymentAdmin(admin.ModelAdmin):
 
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'category', 'size', 'color', 'base_unit', 'purchase_price', 'selling_price', 'discount_percent', 'tax_percent', 'track_inventory', 'opening_stock']
+    list_display = ['code', 'name', 'item_type', 'category', 'size', 'color', 'base_unit', 'purchase_price', 'selling_price', 'discount_percent', 'tax_percent', 'track_inventory', 'opening_stock']
     search_fields = ['name', 'code', 'category', 'color']
-    list_filter = ['category', 'size', 'color', 'track_inventory', 'warehouse']
+    list_filter = ['item_type', 'category', 'size', 'color', 'track_inventory', 'warehouse']

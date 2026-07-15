@@ -248,8 +248,11 @@ export const deleteMaterialIssue = (id: number) => api.delete(`/material-issues/
 export const getTailorJobSummary = (params?: object) =>
   api.get<TailorJobSummary[]>('/job-invoices/tailor_summary/', { params })
 
+export type ItemType = 'selling' | 'production'
+
 export interface Item {
   id: number
+  item_type: ItemType
   name: string
   code: string
   category: string

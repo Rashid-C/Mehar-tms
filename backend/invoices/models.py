@@ -123,6 +123,11 @@ class TailorOrder(models.Model):
 
 
 class Item(models.Model):
+    ITEM_TYPE_CHOICES = [
+        ('selling', 'Selling Item'),
+        ('production', 'Production Item'),
+    ]
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=30, unique=True)  # SKU
     category = models.CharField(max_length=50, blank=True)
