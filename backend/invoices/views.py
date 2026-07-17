@@ -3,13 +3,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Sum, Max, Q
+from django.db import transaction
 import re
-from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Payment, JobInvoice, MaterialIssue, Item
+from .models import Tailor, Invoice, RateSheet, TailorOrder, Payment, JobInvoice, MaterialIssue, Item, StitchingReference, AllocationMaterial, StitchingWorkLine
 from .serializers import (
     TailorSerializer, InvoiceSerializer, RateSheetSerializer,
-    ShopStitchingSerializer,
     TailorOrderSerializer, PaymentSerializer, JobInvoiceSerializer,
     MaterialIssueSerializer, ItemSerializer,
+    StitchingReferenceSerializer, AllocationMaterialSerializer, StitchingWorkLineSerializer,
 )
 
 
@@ -133,48 +134,6 @@ class RateSheetViewSet(viewsets.ModelViewSet):
         return Response({'error': 'MD number not found'}, status=404)
 
 
-class ShopStitchingViewSet(viewsets.ModelViewSet):
-    queryset = ShopStitching.objects.select_related('tailor').all()
-    serializer_class = ShopStitchingSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['md_no', 'tailor__code', 'inv_no']
-    ordering_fields = ['date', 'total']
-
-    def get_queryset(self):
-        queryset = ShopStitching.objects.select_related('tailor').all()
-        tailor = self.request.query_params.get('tailor')
-        month = self.request.query_params.get('month')
-        date = self.request.query_params.get('date')
-        if tailor:
-            queryset = queryset.filter(tailor__code=tailor)
-        if month:
-            queryset = queryset.filter(date__month=month)
-        if date:
-            queryset = queryset.filter(date=date)
-        return queryset
-
-    @action(detail=False, methods=['get'])
-    def summary(self, request):
-        queryset = self.get_queryset()
-        total_pieces = queryset.aggregate(Sum('pc_count'))['pc_count__sum'] or 0
-        total_amount = queryset.aggregate(Sum('total'))['total__sum'] or 0
-        return Response({
-            'total_pieces': total_pieces,
-            'total_amount': total_amount,
-            'total_records': queryset.count(),
-        })
-
-    @action(detail=False, methods=['get'])
-    def next_ref_no(self, request):
-        existing = ShopStitching.objects.filter(
-            ref_no__startswith='ST'
-        ).values_list('ref_no', flat=True)
-        max_num = 0
-        for ref in existing:
-            m = re.match(r'^ST(\d+)$', ref or '')
-            if m:
-                max_num = max(max_num, int(m.group(1)))
-        return Response({'next_ref_no': f"ST{max_num + 1:03d}"})
 
 
 
@@ -238,7 +197,7 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
 
         job_qs  = JobInvoice.objects.select_related('tailor').all()
         order_qs = TailorOrder.objects.select_related('tailor').all()
-        prod_qs  = ShopStitching.objects.select_related('tailor').all()
+        prod_qs  = StitchingWorkLine.objects.select_related('tailor').all()
         mat_qs   = MaterialIssue.objects.select_related('tailor').all()
         pay_qs   = Payment.objects.select_related('tailor').all()
 
@@ -289,8 +248,8 @@ class JobInvoiceViewSet(viewsets.ModelViewSet):
         for s in prod_qs:
             tid = s.tailor.id
             if tid not in by_tailor: by_tailor[tid] = _new(s.tailor)
-            by_tailor[tid]['production_amount'] += float(s.total)
-            by_tailor[tid]['production_qty']    += s.pc_count
+            by_tailor[tid]['production_amount'] += float(s.rate)
+            by_tailor[tid]['production_qty']    += 1
 
         for m in mat_qs:
             tid = m.tailor.id
@@ -419,4 +378,114 @@ class ItemViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(category=category)
         if item_type:
             queryset = queryset.filter(item_type=item_type)
+        return queryset
+
+
+class StitchingReferenceViewSet(viewsets.ModelViewSet):
+    queryset = StitchingReference.objects.select_related('tailor').prefetch_related('materials', 'work_lines__tailor').all()
+    serializer_class = StitchingReferenceSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['ref_no', 'md_no', 'inv_no', 'tailor__code']
+    ordering_fields = ['ref_no', 'created_at']
+
+    def get_queryset(self):
+        queryset = StitchingReference.objects.select_related('tailor').prefetch_related('materials', 'work_lines__tailor').all()
+        tailor = self.request.query_params.get('tailor')
+        month = self.request.query_params.get('month')
+        date = self.request.query_params.get('date')
+        if tailor:
+            queryset = queryset.filter(Q(tailor__code=tailor) | Q(work_lines__tailor__code=tailor))
+        if month:
+            queryset = queryset.filter(work_lines__date__month=month)
+        if date:
+            queryset = queryset.filter(work_lines__date=date)
+        if tailor or month or date:
+            queryset = queryset.distinct()
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        materials = data.get('materials') or []
+        work_lines = data.get('work_lines') or []
+
+        with transaction.atomic():
+            ref_serializer = self.get_serializer(data={k: v for k, v in data.items() if k not in ('materials', 'work_lines')})
+            ref_serializer.is_valid(raise_exception=True)
+            reference = ref_serializer.save()
+
+            for m in materials:
+                if not m.get('name'):
+                    continue
+                mat_serializer = AllocationMaterialSerializer(data={'reference': reference.id, 'name': m.get('name'), 'qty': m.get('qty') or 0})
+                mat_serializer.is_valid(raise_exception=True)
+                mat_serializer.save()
+
+            for w in work_lines:
+                if not (w.get('tailor') and w.get('rate') and w.get('date')):
+                    continue
+                line_serializer = StitchingWorkLineSerializer(data={
+                    'reference': reference.id, 'tailor': w.get('tailor'), 'rate': w.get('rate'), 'date': w.get('date'),
+                })
+                line_serializer.is_valid(raise_exception=True)
+                line_serializer.save()
+
+        return Response(self.get_serializer(reference).data, status=201)
+
+    @action(detail=False, methods=['get'])
+    def next_ref_no(self, request):
+        existing = StitchingReference.objects.filter(
+            ref_no__startswith='ST'
+        ).values_list('ref_no', flat=True)
+        max_num = 0
+        for ref in existing:
+            m = re.match(r'^ST(\d+)$', ref or '')
+            if m:
+                max_num = max(max_num, int(m.group(1)))
+        return Response({'next_ref_no': f"ST{max_num + 1:03d}"})
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        references = self.get_queryset()
+        work_lines = StitchingWorkLine.objects.filter(reference__in=references)
+        month = request.query_params.get('month')
+        date = request.query_params.get('date')
+        if date:
+            work_lines = work_lines.filter(date=date)
+        elif month:
+            work_lines = work_lines.filter(date__month=month)
+        total_amount = work_lines.aggregate(Sum('rate'))['rate__sum'] or 0
+        return Response({
+            'total_amount': total_amount,
+            'total_records': references.count(),
+        })
+
+
+class AllocationMaterialViewSet(viewsets.ModelViewSet):
+    queryset = AllocationMaterial.objects.select_related('reference').all()
+    serializer_class = AllocationMaterialSerializer
+    filter_backends = [filters.OrderingFilter]
+
+    def get_queryset(self):
+        queryset = AllocationMaterial.objects.select_related('reference').all()
+        reference = self.request.query_params.get('reference')
+        if reference:
+            queryset = queryset.filter(reference_id=reference)
+        return queryset
+
+
+class StitchingWorkLineViewSet(viewsets.ModelViewSet):
+    queryset = StitchingWorkLine.objects.select_related('tailor', 'reference').all()
+    serializer_class = StitchingWorkLineSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['tailor__code', 'tailor__name', 'reference__ref_no']
+    ordering_fields = ['date', 'rate']
+
+    def get_queryset(self):
+        queryset = StitchingWorkLine.objects.select_related('tailor', 'reference').all()
+        reference = self.request.query_params.get('reference')
+        tailor = self.request.query_params.get('tailor')
+        if reference:
+            queryset = queryset.filter(reference_id=reference)
+        if tailor:
+            queryset = queryset.filter(tailor__code=tailor)
         return queryset

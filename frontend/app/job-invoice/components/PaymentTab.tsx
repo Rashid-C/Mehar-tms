@@ -198,7 +198,7 @@ export default function PaymentTab({ tailors, onTailorUpdated, notify, fail }: {
                       <span style={{ color: '#0891b2' }}>AED {s.order_amount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span style={{ color: '#94a3b8' }}>Production <span style={{ fontWeight: 700, color: '#475569' }}>({s.production_qty} pc)</span></span>
+                      <span style={{ color: '#94a3b8' }}>Production <span style={{ fontWeight: 700, color: '#475569' }}>({s.production_qty} entries)</span></span>
                       <span style={{ color: '#7c3aed' }}>AED {s.production_amount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>

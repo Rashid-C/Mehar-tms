@@ -1,108 +1,311 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { getStitchings, createStitching, deleteStitching, getTailors, getStitchingSummary, lookupRateSheet, getNextStitchingRefNo, getItems, ShopStitching, Tailor, Item } from '@/lib/api'
+import { Fragment, useEffect, useState } from 'react'
+import {
+  getStitchingReferences, createStitchingReference, deleteStitchingReference,
+  createStitchingMaterial, deleteStitchingMaterial,
+  createStitchingWorkLine, deleteStitchingWorkLine,
+  getNextStitchingRefNo, getStitchingSummary, getTailors, getItems,
+  StitchingReference, Tailor, Item,
+} from '@/lib/api'
 
-const EMPTY = { md_no: '', tailor: '', date: '', pc_count: '', rate: '', cloth: '', mtr: '', inv_no: '', remarks: '' }
+const today = () => new Date().toISOString().slice(0, 10)
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+type MaterialRow = { name: string; qty: string }
+type WorkRow = { tailor: string; rate: string; date: string }
+
+function MaterialNameInput({ value, items, onChange }: { value: string; items: Item[]; onChange: (v: string) => void }) {
+  const [showList, setShowList] = useState(false)
+  const matches = items.filter(it => !value || it.name.toLowerCase().includes(value.toLowerCase()))
+  return (
+    <div style={{ position: 'relative' }}>
+      <input className="field" value={value} onChange={e => onChange(e.target.value)}
+        onFocus={() => setShowList(true)}
+        onBlur={() => setTimeout(() => setShowList(false), 150)}
+        placeholder="e.g. Shawl, Nida…" autoComplete="off" />
+      {showList && matches.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', maxHeight: 180, overflowY: 'auto', zIndex: 20 }}>
+          {matches.map(it => (
+            <button key={it.id} type="button"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { onChange(it.name); setShowList(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, color: '#374151', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+              {it.name} {it.code && <span style={{ color: '#94a3b8', fontSize: 10 }}>({it.code})</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function StitchingPage() {
-  const [records, setRecords]     = useState<ShopStitching[]>([])
-  const [tailors, setTailors]     = useState<Tailor[]>([])
-  const [summary, setSummary]     = useState({ total_pieces: 0, total_amount: 0, total_records: 0 })
-  const [form, setForm]           = useState(EMPTY)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
-  const [success, setSuccess]     = useState('')
-  const [filterMonth, setFilterMonth]   = useState(new Date().getMonth() + 1)
-  const [filterTailor, setFilterTailor] = useState('')
-  const [refNo, setRefNo]               = useState('')
+  const [records, setRecords] = useState<StitchingReference[]>([])
+  const [tailors, setTailors] = useState<Tailor[]>([])
   const [productionItems, setProductionItems] = useState<Item[]>([])
-  const [showClothList, setShowClothList] = useState(false)
+  const [summary, setSummary] = useState({ total_amount: 0, total_records: 0 })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1)
+  const [filterTailor, setFilterTailor] = useState('')
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+
+  // ── Inline "New Reference" panel ──────────────────────────────────────
+  const [showCreate, setShowCreate] = useState(false)
+  const [refNo, setRefNo] = useState('')
+  const [mdNo, setMdNo] = useState('')
+  const [invNo, setInvNo] = useState('')
+  const [allocationTailor, setAllocationTailor] = useState('')
+  const [remarks, setRemarks] = useState('')
+  const [materials, setMaterials] = useState<MaterialRow[]>([{ name: '', qty: '' }])
+  const [workLines, setWorkLines] = useState<WorkRow[]>([{ tailor: '', rate: '', date: today() }])
+  const [saving, setSaving] = useState(false)
+  const [createError, setCreateError] = useState('')
+
+  // ── Inline "add material / add work" per expanded row ──────────────────
+  const [matName, setMatName] = useState('')
+  const [matQty, setMatQty] = useState('')
+  const [workTailor, setWorkTailor] = useState('')
+  const [workRate, setWorkRate] = useState('')
+  const [workDate, setWorkDate] = useState(today())
+  const [savingMat, setSavingMat] = useState(false)
+  const [savingWork, setSavingWork] = useState(false)
+
+  const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3000) }
+  const fail = (msg: string) => { setError(msg); setSuccess('') }
 
   const fetchData = async () => {
-    const params: Record<string, string | number> = { month: filterMonth }
-    if (filterTailor) params.tailor = filterTailor
-    const [recRes, sumRes, tailorRes] = await Promise.all([
-      getStitchings(params), getStitchingSummary(params), getTailors({ page_size: 1000 }),
-    ])
-    setRecords(recRes.data)
-    setSummary(sumRes.data)
-    setTailors(tailorRes.data.results)
-  }
-
-  const fetchNextRefNo = async () => {
-    const res = await getNextStitchingRefNo()
-    setRefNo(res.data.next_ref_no)
+    setLoading(true)
+    try {
+      const params: Record<string, string | number> = { month: filterMonth }
+      if (filterTailor) params.tailor = filterTailor
+      const [recRes, sumRes] = await Promise.all([getStitchingReferences(params), getStitchingSummary(params)])
+      setRecords(recRes.data)
+      setSummary(sumRes.data)
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchData() }, [filterMonth, filterTailor])
   useEffect(() => {
-    fetchNextRefNo()
+    getTailors({ page_size: 1000 }).then(r => setTailors(r.data.results))
     getItems({ item_type: 'production' }).then(r => setProductionItems(r.data))
   }, [])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  // ── Create panel helpers ────────────────────────────────────────────────
+  const openCreate = () => {
+    setShowCreate(true); setCreateError('')
+    setMdNo(''); setInvNo(''); setAllocationTailor(''); setRemarks('')
+    setMaterials([{ name: '', qty: '' }])
+    setWorkLines([{ tailor: '', rate: '', date: today() }])
+    getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
   }
+  const closeCreate = () => setShowCreate(false)
 
-  const handleMdNoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setForm(prev => ({ ...prev, md_no: value, tailor: '', rate: '', inv_no: '' }))
-    if (value.length >= 2) {
-      try {
-        const res = await lookupRateSheet(value)
-        if (res.data) setForm(prev => ({ ...prev, md_no: value, tailor: String(res.data.tailor_id), rate: String(res.data.rate), inv_no: res.data.inv_no || '' }))
-      } catch { }
-    }
-  }
+  const materialsTotal = materials.reduce((s, m) => s + (parseFloat(m.qty) || 0), 0)
+  const workTotal = workLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
 
-  const handleSubmit = async () => {
-    setError(''); setSuccess('')
-    if (!form.md_no || !form.tailor || !form.date || !form.pc_count || !form.rate) {
-      setError('MD No, Tailor, Date, Pieces and Rate are required'); return
-    }
-    setLoading(true)
+  const updateMaterial = (i: number, patch: Partial<MaterialRow>) => setMaterials(prev => prev.map((m, idx) => idx === i ? { ...m, ...patch } : m))
+  const addMaterial = () => setMaterials(prev => [...prev, { name: '', qty: '' }])
+  const removeMaterial = (i: number) => setMaterials(prev => prev.filter((_, idx) => idx !== i))
+
+  const updateWork = (i: number, patch: Partial<WorkRow>) => setWorkLines(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w))
+  const addWork = () => setWorkLines(prev => [...prev, { tailor: '', rate: '', date: today() }])
+  const removeWork = (i: number) => setWorkLines(prev => prev.filter((_, idx) => idx !== i))
+
+  const handleCreate = async () => {
+    setCreateError('')
+    if (!allocationTailor) { setCreateError('Please select the Allocation Cut tailor'); return }
+    const validWork = workLines.filter(w => w.tailor && w.rate && w.date)
+    if (validWork.length === 0) { setCreateError('Add at least one stitching work line (Tailor, Rate, Date)'); return }
+    setSaving(true)
     try {
-      await createStitching({
-        ref_no: refNo, md_no: form.md_no, tailor: parseInt(form.tailor), date: form.date,
-        pc_count: parseInt(form.pc_count), rate: parseFloat(form.rate),
-        cloth: form.cloth, mtr: form.mtr ? parseFloat(form.mtr) : null,
-        inv_no: form.inv_no, remarks: form.remarks,
+      await createStitchingReference({
+        ref_no: refNo, md_no: mdNo, inv_no: invNo, tailor: parseInt(allocationTailor), remarks,
+        materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0 })),
+        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), rate: parseFloat(w.rate), date: w.date })),
       })
-      setSuccess(`Stitching record ${refNo} added for MD ${form.md_no}`)
-      setForm(EMPTY); fetchData(); fetchNextRefNo()
+      notify(`Reference ${refNo} created`)
+      setShowCreate(false)
+      await fetchData()
     } catch (err: unknown) {
       const e = err as { response?: { data?: unknown } }
-      setError(e.response?.data ? JSON.stringify(e.response.data) : 'Something went wrong')
-    } finally { setLoading(false) }
+      setCreateError(e.response?.data ? JSON.stringify(e.response.data) : 'Failed to save')
+    } finally { setSaving(false) }
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this stitching record?')) return
-    await deleteStitching(id); fetchData()
+  // ── Row expand / delete ─────────────────────────────────────────────────
+  const toggleExpand = (r: StitchingReference) => {
+    if (expandedId === r.id) { setExpandedId(null); return }
+    setExpandedId(r.id)
+    setMatName(''); setMatQty(''); setWorkTailor(''); setWorkRate(''); setWorkDate(today())
   }
 
-  const autoTotal = form.pc_count && form.rate
-    ? (parseFloat(form.pc_count) * parseFloat(form.rate)).toFixed(2) : null
+  const handleDeleteRef = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Delete this stitching reference and all its materials/work lines?')) return
+    try { await deleteStitchingReference(id); notify('Reference deleted'); if (expandedId === id) setExpandedId(null); await fetchData() }
+    catch { fail('Failed to delete') }
+  }
+
+  const handleAddMaterial = async (referenceId: number, e: React.FormEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    if (!matName) { fail('Material name is required'); return }
+    setSavingMat(true)
+    try {
+      await createStitchingMaterial({ reference: referenceId, name: matName, qty: parseFloat(matQty) || 0 })
+      setMatName(''); setMatQty(''); notify('Material added'); await fetchData()
+    } catch { fail('Failed to add material') } finally { setSavingMat(false) }
+  }
+
+  const handleDeleteMaterial = async (matId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Remove this material?')) return
+    try { await deleteStitchingMaterial(matId); await fetchData() } catch { fail('Failed to delete') }
+  }
+
+  const handleAddWork = async (referenceId: number, e: React.FormEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    if (!workTailor || !workRate || !workDate) { fail('Tailor, Rate and Date are required'); return }
+    setSavingWork(true)
+    try {
+      await createStitchingWorkLine({ reference: referenceId, tailor: parseInt(workTailor), rate: parseFloat(workRate), date: workDate })
+      setWorkTailor(''); setWorkRate(''); setWorkDate(today()); notify('Work line added'); await fetchData()
+    } catch { fail('Failed to add work line') } finally { setSavingWork(false) }
+  }
+
+  const handleDeleteWork = async (lineId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Delete this work line?')) return
+    try { await deleteStitchingWorkLine(lineId); await fetchData() } catch { fail('Failed to delete') }
+  }
 
   return (
     <main style={{ padding: '24px', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1150, margin: '0 auto' }}>
 
         {/* Header */}
-        <div style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Stitching</p>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Shop Stitching</h1>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Daily stitching work log — MD number auto-fills tailor and rate</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between" style={{ marginBottom: 20, gap: 12 }}>
+          <div>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Stitching</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Shop Stitching</h1>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Each reference groups a material allocation with one or more tailors&apos; stitching work</p>
+          </div>
+          <button onClick={showCreate ? closeCreate : openCreate} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>
+            {showCreate ? '× Cancel' : '+ Production'}
+          </button>
         </div>
 
+        {success && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{success}</div>}
+        {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{error}</div>}
+
+        {/* Inline creation panel */}
+        {showCreate && (
+          <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>New Production Reference</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
+                {refNo || '…'}
+              </span>
+            </div>
+            <div style={{ padding: 20 }}>
+              {createError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{createError}</div>}
+
+              <div className="grid grid-cols-3 gap-3" style={{ marginBottom: 16 }}>
+                <div>
+                  <label style={lbl}>Model Number</label>
+                  <input className="field" value={mdNo} onChange={e => setMdNo(e.target.value)} placeholder="Editable model no…" />
+                </div>
+                <div>
+                  <label style={lbl}>Inv No</label>
+                  <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
+                </div>
+                <div>
+                  <label style={lbl}>Allocation Cut (Tailor) *</label>
+                  <select className="field" value={allocationTailor} onChange={e => setAllocationTailor(e.target.value)}>
+                    <option value="">Select tailor</option>
+                    {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Materials */}
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{materialsTotal.toFixed(2)}</strong></span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {materials.map((m, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                    <div>
+                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Material {i + 1}</label>}
+                      <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateMaterial(i, { name: v })} />
+                    </div>
+                    <div>
+                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Qty</label>}
+                      <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateMaterial(i, { qty: e.target.value })} placeholder="0" />
+                    </div>
+                    <button type="button" onClick={() => removeMaterial(i)} disabled={materials.length === 1}
+                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: materials.length === 1 ? 0.3 : 1 }}>×</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                  + Add Material {materials.length + 1}
+                </button>
+              </div>
+
+              {/* Stitching Work */}
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ ...lbl, marginBottom: 0 }}>Stitching Work</label>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {workTotal.toFixed(2)}</strong></span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {workLines.map((w, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                    <div>
+                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Work {i + 1} — Tailor</label>}
+                      <select className="field" value={w.tailor} onChange={e => updateWork(i, { tailor: e.target.value })}>
+                        <option value="">Select</option>
+                        {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Rate (AED)</label>}
+                      <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateWork(i, { rate: e.target.value })} placeholder="0.00" />
+                    </div>
+                    <div>
+                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Date</label>}
+                      <input type="date" className="field" value={w.date} onChange={e => updateWork(i, { date: e.target.value })} />
+                    </div>
+                    <button type="button" onClick={() => removeWork(i)} disabled={workLines.length === 1}
+                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: workLines.length === 1 ? 0.3 : 1 }}>×</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                  + Add Work {workLines.length + 1}
+                </button>
+              </div>
+
+              <div>
+                <label style={lbl}>Remarks</label>
+                <input className="field" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional notes…" style={{ marginBottom: 16 }} />
+              </div>
+
+              <button onClick={handleCreate} disabled={saving} className="btn-gold" style={{ background: '#16a34a' }}>
+                {saving ? 'Saving…' : 'Save Reference'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 16 }}>
           {[
-            { label: 'Total Records', value: summary.total_records, color: '#1e293b' },
-            { label: 'Total Pieces',  value: summary.total_pieces,  color: '#2563eb' },
-            { label: 'Total Amount',  value: `AED ${summary.total_amount}`, color: '#16a34a' },
+            { label: 'Total References', value: summary.total_records, color: '#1e293b' },
+            { label: 'Total Work Amount', value: `AED ${summary.total_amount}`, color: '#16a34a' },
           ].map(c => (
             <div key={c.label} style={{ background: '#ffffff', border: '1px solid #e8ecf0', borderRadius: 8, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
               <p style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{c.label}</p>
@@ -111,104 +314,10 @@ export default function StitchingPage() {
           ))}
         </div>
 
-        {/* Add Form */}
-        <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Add Stitching Record</span>
-          </div>
-          <div style={{ padding: '16px' }}>
-            {error   && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 12 }}>{error}</div>}
-            {success && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 12 }}>{success}</div>}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div>
-                <label style={lbl}>Ref No</label>
-                <input className="field font-mono" value={refNo} readOnly
-                  style={{ color: '#0d9488', cursor: 'default', background: 'rgba(13,148,136,0.06)' }} />
-              </div>
-              {[
-                { name: 'md_no',  label: 'MD No *', placeholder: '787',  type: 'text', onChange: handleMdNoChange },
-                { name: 'date',   label: 'Date *',  placeholder: '',     type: 'date', onChange: handleChange },
-                { name: 'inv_no', label: 'Inv No',  placeholder: '1165', type: 'text', onChange: handleChange },
-              ].map(f => (
-                <div key={f.name}>
-                  <label style={lbl}>{f.label}</label>
-                  <input name={f.name} className="field" value={form[f.name as keyof typeof form]} onChange={f.onChange} placeholder={f.placeholder} type={f.type} />
-                </div>
-              ))}
-              <div>
-                <label style={lbl}>Tailor *</label>
-                <select name="tailor" className="field" value={form.tailor} onChange={handleChange}>
-                  <option value="">Select</option>
-                  {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-              {[
-                { name: 'pc_count', label: 'Pieces *',    placeholder: '12',      type: 'number' },
-                { name: 'rate',     label: 'Rate (AED) *', placeholder: '30',     type: 'number' },
-              ].map(f => (
-                <div key={f.name}>
-                  <label style={lbl}>{f.label}</label>
-                  <input name={f.name} className="field" value={form[f.name as keyof typeof form]} onChange={handleChange} placeholder={f.placeholder} type={f.type} />
-                </div>
-              ))}
-              <div style={{ position: 'relative' }}>
-                <label style={lbl}>Cloth</label>
-                <input name="cloth" className="field" value={form.cloth} onChange={handleChange}
-                  onFocus={() => setShowClothList(true)}
-                  onBlur={() => setTimeout(() => setShowClothList(false), 150)}
-                  placeholder="Cotton… or click for production items" type="text" autoComplete="off" />
-                {showClothList && productionItems.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', maxHeight: 200, overflowY: 'auto', zIndex: 20 }}>
-                    {productionItems
-                      .filter(it => !form.cloth || it.name.toLowerCase().includes(form.cloth.toLowerCase()))
-                      .map(it => (
-                        <button key={it.id} type="button"
-                          onMouseDown={e => e.preventDefault()}
-                          onClick={() => { setForm(prev => ({ ...prev, cloth: it.name })); setShowClothList(false) }}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13, color: '#374151', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                          {it.name} {it.code && <span style={{ color: '#94a3b8', fontSize: 11 }}>({it.code})</span>}
-                        </button>
-                      ))}
-                    {productionItems.filter(it => !form.cloth || it.name.toLowerCase().includes(form.cloth.toLowerCase())).length === 0 && (
-                      <div style={{ padding: '8px 12px', fontSize: 12, color: '#9ca3af' }}>No matching production items</div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label style={lbl}>Mtr (Cloth)</label>
-                <input name="mtr" className="field" value={form.mtr} onChange={handleChange} placeholder="1.5" type="number" />
-              </div>
-            </div>
-
-            {autoTotal && (
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Calculated Total:</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>AED {autoTotal}</span>
-              </div>
-            )}
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Remarks</label>
-              <input name="remarks" className="field" value={form.remarks} onChange={handleChange} placeholder="Optional notes…" />
-            </div>
-
-            <button onClick={handleSubmit} disabled={loading} className="btn-gold">
-              {loading ? 'Saving…' : '+ Add Record'}
-            </button>
-          </div>
-        </div>
-
         {/* Filters + Table */}
         <div className="card" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Records</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>References</span>
             <select className="field" style={{ width: 'auto' }} value={filterMonth} onChange={e => setFilterMonth(parseInt(e.target.value))}>
               {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
@@ -218,57 +327,128 @@ export default function StitchingPage() {
             </select>
           </div>
 
-          <table className="z-table">
-            <thead>
-              <tr>
-                <th>Ref No</th>
-                <th>Date</th>
-                <th>MD No</th>
-                <th>Tailor</th>
-                <th>Pieces</th>
-                <th>Rate</th>
-                <th>Total</th>
-                <th>Cloth</th>
-                <th>Mtr</th>
-                <th>Inv No</th>
-                <th>Remarks</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map(r => (
-                <tr key={r.id}>
-                  <td style={{ fontWeight: 700, color: '#0d9488', fontFamily: 'monospace' }}>{r.ref_no || '—'}</td>
-                  <td style={{ color: '#6b7280' }}>{r.date}</td>
-                  <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{r.md_no}</td>
-                  <td><span className="badge badge-blue">{r.tailor_code}</span></td>
-                  <td style={{ fontWeight: 600 }}>{r.pc_count}</td>
-                  <td style={{ color: '#6b7280' }}>{r.rate}</td>
-                  <td style={{ color: '#16a34a', fontWeight: 600 }}>AED {r.total}</td>
-                  <td style={{ color: '#6b7280' }}>{r.cloth || '—'}</td>
-                  <td style={{ color: '#6b7280' }}>{r.mtr || '—'}</td>
-                  <td style={{ color: '#6b7280', fontFamily: 'monospace' }}>{r.inv_no || '—'}</td>
-                  <td style={{ color: '#9ca3af' }}>{r.remarks || '—'}</td>
-                  <td>
-                    <button onClick={() => handleDelete(r.id)} className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }}>Del</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {records.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td colSpan={4}>Total</td>
-                  <td>{summary.total_pieces}</td>
-                  <td />
-                  <td>AED {summary.total_amount}</td>
-                  <td colSpan={5} />
-                </tr>
-              </tfoot>
-            )}
-          </table>
-          {records.length === 0 && (
-            <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>No stitching records for this period.</p>
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '48px', color: '#94a3b8' }}>
+              <span className="spinner" /><span style={{ fontSize: 13 }}>Loading…</span>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="z-table" style={{ minWidth: 900 }}>
+                <thead>
+                  <tr>
+                    <th>Ref No</th>
+                    <th>MD No</th>
+                    <th>Allocation Cut</th>
+                    <th>Materials</th>
+                    <th>Tailors (Work)</th>
+                    <th>Work Total</th>
+                    <th>Inv No</th>
+                    <th>Remarks</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map(r => (
+                    <Fragment key={r.id}>
+                      <tr onClick={() => toggleExpand(r)} style={{ cursor: 'pointer', background: expandedId === r.id ? '#f8fafc' : undefined }}>
+                        <td style={{ fontWeight: 700, color: '#7c3aed', fontFamily: 'monospace' }}>
+                          <span style={{ display: 'inline-block', marginRight: 6, transition: 'transform 0.15s', transform: expandedId === r.id ? 'rotate(90deg)' : 'none' }}>›</span>
+                          {r.ref_no}
+                        </td>
+                        <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{r.md_no || '—'}</td>
+                        <td><span className="badge badge-blue">{r.tailor_code}</span> <span style={{ color: '#64748b', fontSize: 12 }}>{r.tailor_name}</span></td>
+                        <td style={{ color: '#374151' }}>
+                          {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : `${r.materials.length} · ${r.materials_total}`}
+                        </td>
+                        <td>
+                          {r.work_lines.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> :
+                            Array.from(new Set(r.work_lines.map(w => w.tailor_code))).map(code => (
+                              <span key={code} className="badge badge-cyan" style={{ marginRight: 4 }}>{code}</span>
+                            ))}
+                        </td>
+                        <td style={{ color: '#16a34a', fontWeight: 600 }}>AED {r.work_total.toFixed(2)}</td>
+                        <td style={{ color: '#6b7280', fontFamily: 'monospace' }}>{r.inv_no || '—'}</td>
+                        <td style={{ color: '#9ca3af' }}>{r.remarks || '—'}</td>
+                        <td>
+                          <button onClick={e => handleDeleteRef(r.id, e)} className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }}>Del</button>
+                        </td>
+                      </tr>
+                      {expandedId === r.id && (
+                        <tr>
+                          <td colSpan={9} style={{ padding: 0, background: '#f8fafc' }}>
+                            <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
+
+                              {/* Materials management */}
+                              <div className="card" style={{ overflow: 'hidden' }}>
+                                <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff' }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>Materials</span>
+                                </div>
+                                <form onSubmit={e => handleAddMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                  <MaterialNameInput value={matName} items={productionItems} onChange={setMatName} />
+                                  <input type="number" min="0" step="0.01" className="field" value={matQty} onChange={e => setMatQty(e.target.value)} placeholder="Qty" />
+                                  <button type="submit" disabled={savingMat} className="btn-gold" style={{ background: '#7c3aed', padding: '8px 12px', fontSize: 12 }}>+</button>
+                                </form>
+                                {r.materials.length === 0 ? (
+                                  <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No materials yet.</p>
+                                ) : (
+                                  <table className="z-table">
+                                    <tbody>
+                                      {r.materials.map(m => (
+                                        <tr key={m.id}>
+                                          <td style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</td>
+                                          <td style={{ fontSize: 12 }}>{m.qty}</td>
+                                          <td><button onClick={e => handleDeleteMaterial(m.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button></td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+
+                              {/* Work lines management */}
+                              <div className="card" style={{ overflow: 'hidden' }}>
+                                <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f0fdf4' }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Stitching Work — add more tailors</span>
+                                </div>
+                                <form onSubmit={e => handleAddWork(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                  <select className="field" value={workTailor} onChange={e => setWorkTailor(e.target.value)}>
+                                    <option value="">Tailor</option>
+                                    {tailors.map(t => <option key={t.id} value={t.id}>{t.code}</option>)}
+                                  </select>
+                                  <input type="number" min="0" step="0.01" className="field" value={workRate} onChange={e => setWorkRate(e.target.value)} placeholder="Rate" />
+                                  <input type="date" className="field" value={workDate} onChange={e => setWorkDate(e.target.value)} />
+                                  <button type="submit" disabled={savingWork} className="btn-gold" style={{ background: '#16a34a', padding: '8px 12px', fontSize: 12 }}>+</button>
+                                </form>
+                                {r.work_lines.length === 0 ? (
+                                  <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No work lines yet.</p>
+                                ) : (
+                                  <table className="z-table">
+                                    <tbody>
+                                      {r.work_lines.map(w => (
+                                        <tr key={w.id}>
+                                          <td style={{ fontSize: 12, color: '#6b7280' }}>{w.date}</td>
+                                          <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{w.tailor_code}</span></td>
+                                          <td style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>AED {w.rate}</td>
+                                          <td><button onClick={e => handleDeleteWork(w.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button></td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!loading && records.length === 0 && (
+            <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>No stitching references yet. Click + Production to create one.</p>
           )}
         </div>
 

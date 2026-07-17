@@ -120,33 +120,57 @@ export const lookupRateSheet = (md_no: string) => api.get<{
 
 
 
-export interface ShopStitching {
+export interface AllocationMaterial {
   id: number
-  ref_no: string | null
+  reference: number
+  name: string
+  qty: number
+}
+
+export interface StitchingWorkLine {
+  id: number
+  reference: number
   tailor: number
   tailor_code: string
   tailor_name: string
-  md_no: string
-  date: string
-  pc_count: number
   rate: number
-  total: number
-  cloth: string
-  mtr: number | null
-  inv_no: string
-  remarks: string
+  date: string
 }
 
-export const getStitchings = (params?: object) => api.get<ShopStitching[]>('/stitching/', { params })
-export const createStitching = (data: object) => api.post('/stitching/', data)
-export const getNextStitchingRefNo = () => api.get<{ next_ref_no: string }>('/stitching/next_ref_no/')
-export const updateStitching = (id: number, data: object) => api.put(`/stitching/${id}/`, data)
-export const deleteStitching = (id: number) => api.delete(`/stitching/${id}/`)
+export interface StitchingReference {
+  id: number
+  ref_no: string
+  md_no: string
+  tailor: number
+  tailor_code: string
+  tailor_name: string
+  inv_no: string
+  remarks: string
+  created_at: string
+  materials: AllocationMaterial[]
+  work_lines: StitchingWorkLine[]
+  materials_total: number
+  work_total: number
+}
+
+export const getStitchingReferences = (params?: object) => api.get<StitchingReference[]>('/stitching-references/', { params })
+export const getStitchingReference = (id: number) => api.get<StitchingReference>(`/stitching-references/${id}/`)
+export const createStitchingReference = (data: object) => api.post<StitchingReference>('/stitching-references/', data)
+export const updateStitchingReference = (id: number, data: object) => api.put<StitchingReference>(`/stitching-references/${id}/`, data)
+export const deleteStitchingReference = (id: number) => api.delete(`/stitching-references/${id}/`)
+export const getNextStitchingRefNo = () => api.get<{ next_ref_no: string }>('/stitching-references/next_ref_no/')
 export const getStitchingSummary = (params?: object) => api.get<{
-  total_pieces: number
   total_amount: number
   total_records: number
-}>('/stitching/summary/', { params })
+}>('/stitching-references/summary/', { params })
+
+export const createStitchingMaterial = (data: object) => api.post<AllocationMaterial>('/stitching-materials/', data)
+export const updateStitchingMaterial = (id: number, data: object) => api.put<AllocationMaterial>(`/stitching-materials/${id}/`, data)
+export const deleteStitchingMaterial = (id: number) => api.delete(`/stitching-materials/${id}/`)
+
+export const createStitchingWorkLine = (data: object) => api.post<StitchingWorkLine>('/stitching-work-lines/', data)
+export const updateStitchingWorkLine = (id: number, data: object) => api.put<StitchingWorkLine>(`/stitching-work-lines/${id}/`, data)
+export const deleteStitchingWorkLine = (id: number) => api.delete(`/stitching-work-lines/${id}/`)
 
 
 
@@ -276,3 +300,4 @@ export const getItems = (params?: object) => api.get<Item[]>('/items/', { params
 export const createItem = (data: object) => api.post<Item>('/items/', data)
 export const updateItem = (id: number, data: object) => api.put<Item>(`/items/${id}/`, data)
 export const deleteItem = (id: number) => api.delete(`/items/${id}/`)
+

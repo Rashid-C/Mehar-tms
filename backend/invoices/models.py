@@ -57,29 +57,47 @@ class RateSheet(models.Model):
     class Meta:
         ordering = ['md_no']
 
-class ShopStitching(models.Model):
-    ref_no = models.CharField(max_length=20, unique=True, null=True, blank=True)
-    tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitchings')
-    md_no = models.CharField(max_length=20)
-    date = models.DateField()
-    pc_count = models.PositiveIntegerField()
-    rate = models.DecimalField(max_digits=8, decimal_places=2)
-    total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
-    cloth = models.CharField(max_length=100, blank=True)
-    mtr = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+
+
+class StitchingReference(models.Model):
+    ref_no = models.CharField(max_length=20, unique=True)
+    md_no = models.CharField(max_length=20, blank=True)
+    tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitching_references')  # Allocation Cut
     inv_no = models.CharField(max_length=20, blank=True)
     remarks = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def save(self, *args, **kwargs):
-        self.total = self.pc_count * self.rate
-        super().save(*args, **kwargs)
-
     def __str__(self):
-        return f"{self.date} | {self.tailor.code} | {self.md_no} | {self.total}"
+        return self.ref_no
 
     class Meta:
-        ordering = ['-date', '-created_at']
+        ordering = ['-created_at']
+
+
+class AllocationMaterial(models.Model):
+    reference = models.ForeignKey(StitchingReference, on_delete=models.CASCADE, related_name='materials')
+    name = models.CharField(max_length=100)
+    qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.reference.ref_no} | {self.name} | {self.qty}"
+
+    class Meta:
+        ordering = ['id']
+
+
+class StitchingWorkLine(models.Model):
+    reference = models.ForeignKey(StitchingReference, on_delete=models.CASCADE, related_name='work_lines')
+    tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitching_work_lines')
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateField()
+
+    def __str__(self):
+        return f"{self.reference.ref_no} | {self.tailor.code} | {self.rate}"
+
+    class Meta:
+        ordering = ['-date', 'id']
+
 
 class JobInvoice(models.Model):
     inv_no = models.CharField(max_length=20, unique=True)   # MP001, MP002 …

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tailor, Invoice, RateSheet, ShopStitching, TailorOrder, Payment, JobInvoice, Item
+from .models import Tailor, Invoice, RateSheet, TailorOrder, Payment, JobInvoice, Item, StitchingReference, AllocationMaterial, StitchingWorkLine
 
 @admin.register(Tailor)
 class TailorAdmin(admin.ModelAdmin):
@@ -18,13 +18,6 @@ class RateSheetAdmin(admin.ModelAdmin):
     list_display = ['md_no', 'tailor', 'rate', 'work_type', 'is_active']
     search_fields = ['md_no', 'tailor__code']
     list_filter = ['tailor', 'is_active', 'work_type']
-
-@admin.register(ShopStitching)
-class ShopStitchingAdmin(admin.ModelAdmin):
-    list_display = ['date', 'tailor', 'md_no', 'pc_count', 'rate', 'total', 'cloth', 'mtr']
-    search_fields = ['md_no', 'tailor__code', 'inv_no']
-    list_filter = ['tailor', 'date']
-
 
 @admin.register(JobInvoice)
 class JobInvoiceAdmin(admin.ModelAdmin):
@@ -50,3 +43,29 @@ class ItemAdmin(admin.ModelAdmin):
     list_display = ['code', 'name', 'item_type', 'category', 'size', 'color', 'base_unit', 'purchase_price', 'selling_price', 'discount_percent', 'tax_percent', 'track_inventory', 'opening_stock']
     search_fields = ['name', 'code', 'category', 'color']
     list_filter = ['item_type', 'category', 'size', 'color', 'track_inventory', 'warehouse']
+
+class AllocationMaterialInline(admin.TabularInline):
+    model = AllocationMaterial
+    extra = 0
+
+class StitchingWorkLineInline(admin.TabularInline):
+    model = StitchingWorkLine
+    extra = 0
+
+@admin.register(StitchingReference)
+class StitchingReferenceAdmin(admin.ModelAdmin):
+    list_display = ['ref_no', 'md_no', 'tailor', 'inv_no', 'created_at']
+    search_fields = ['ref_no', 'md_no', 'inv_no', 'tailor__code']
+    list_filter = ['tailor']
+    inlines = [AllocationMaterialInline, StitchingWorkLineInline]
+
+@admin.register(AllocationMaterial)
+class AllocationMaterialAdmin(admin.ModelAdmin):
+    list_display = ['reference', 'name', 'qty']
+    search_fields = ['reference__ref_no', 'name']
+
+@admin.register(StitchingWorkLine)
+class StitchingWorkLineAdmin(admin.ModelAdmin):
+    list_display = ['reference', 'tailor', 'rate', 'date']
+    search_fields = ['reference__ref_no', 'tailor__code']
+    list_filter = ['tailor', 'date']
