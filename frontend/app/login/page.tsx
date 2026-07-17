@@ -39,13 +39,13 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: 'inherit' }}>
+    <div className="flex flex-col lg:flex-row" style={{ minHeight: '100vh', fontFamily: 'inherit' }}>
 
-      {/* ── Left — Brand panel ─────────────────────────────────── */}
-      <div style={{
+      {/* ── Left — Brand panel (hidden on mobile) ─────────────────────────────────── */}
+      <div className="hidden lg:flex" style={{
         flex: 1,
         background: 'linear-gradient(145deg, #fef9e7 0%, #eff6ff 55%, #dbeafe 100%)',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        flexDirection: 'column', justifyContent: 'center',
         padding: '64px 72px', position: 'relative', overflow: 'hidden',
       }}>
         {/* Subtle radial glow */}
@@ -106,9 +106,10 @@ export default function Login() {
       </div>
 
       {/* ── Right — Form panel ─────────────────────────────────── */}
-      <div style={{ width: 480, background: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '64px 56px', boxShadow: '-2px 0 20px rgba(0,0,0,0.04)', position: 'relative' }}>
+      <div className="w-full lg:w-[480px] px-6 py-10 lg:px-14 lg:py-16" style={{ background: '#ffffff', display: 'flex', flexDirection: 'column', boxShadow: '-2px 0 20px rgba(0,0,0,0.04)', minHeight: '100vh' }}>
+       <div style={{ maxWidth: 380, width: '100%', margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
 
-        <div style={{ marginBottom: 36 }}>
+        <div className="flex justify-center lg:justify-start" style={{ marginBottom: 36 }}>
           <Image src="/logo.png" alt="Mehar Pardha" width={40} height={40} style={{ objectFit: 'contain' }} />
         </div>
 
@@ -167,8 +168,9 @@ export default function Login() {
             </button>
           </div>
         )}
+       </div>
 
-        <p style={{ position: 'absolute', bottom: 32, left: 56, right: 56, fontSize: 12, color: '#9ca3af', textAlign: 'center' }}>
+        <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 24 }}>
           © {new Date().getFullYear()} Mehar Pardha — Deira, Dubai. All rights reserved.
         </p>
       </div>
