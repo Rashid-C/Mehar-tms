@@ -424,7 +424,8 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
                 if not (w.get('tailor') and w.get('rate') and w.get('date')):
                     continue
                 line_serializer = StitchingWorkLineSerializer(data={
-                    'reference': reference.id, 'tailor': w.get('tailor'), 'rate': w.get('rate'), 'date': w.get('date'),
+                    'reference': reference.id, 'tailor': w.get('tailor'), 'work_type': w.get('work_type') or 'Stitching',
+                    'rate': w.get('rate'), 'date': w.get('date'),
                 })
                 line_serializer.is_valid(raise_exception=True)
                 line_serializer.save()

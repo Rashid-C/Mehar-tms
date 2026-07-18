@@ -66,6 +66,6 @@ class AllocationMaterialAdmin(admin.ModelAdmin):
 
 @admin.register(StitchingWorkLine)
 class StitchingWorkLineAdmin(admin.ModelAdmin):
-    list_display = ['reference', 'tailor', 'rate', 'date']
-    search_fields = ['reference__ref_no', 'tailor__code']
-    list_filter = ['tailor', 'date']
+    list_display = ['reference', 'tailor', 'work_type', 'rate', 'date']
+    search_fields = ['reference__ref_no', 'tailor__code', 'work_type']
+    list_filter = ['tailor', 'work_type', 'date']

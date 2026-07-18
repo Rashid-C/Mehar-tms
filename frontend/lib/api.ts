@@ -134,6 +134,7 @@ export interface StitchingWorkLine {
   tailor: number
   tailor_code: string
   tailor_name: string
+  work_type: string
   rate: number
   date: string
 }

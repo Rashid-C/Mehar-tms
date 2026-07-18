@@ -11,9 +11,10 @@ import {
 const today = () => new Date().toISOString().slice(0, 10)
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const DEFAULT_WORK_TYPES = ['Stitching', 'Cutting', 'Finishing', 'Packing', 'Ironing', 'Embroidery']
 
 type MaterialRow = { name: string; qty: string; price: string }
-type WorkRow = { tailor: string; rate: string; date: string }
+type WorkRow = { tailor: string; rate: string; date: string; work_type: string }
 
 function MaterialNameInput({ value, items, onChange, onPick, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; onPick?: (item: Item) => void; excludeNames?: string[] }) {
   const [showList, setShowList] = useState(false)
@@ -63,7 +64,7 @@ export default function StitchingPage() {
   const [allocationTailor, setAllocationTailor] = useState('')
   const [remarks, setRemarks] = useState('')
   const [materials, setMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '' }])
-  const [workLines, setWorkLines] = useState<WorkRow[]>([{ tailor: '', rate: '', date: today() }])
+  const [workLines, setWorkLines] = useState<WorkRow[]>([{ tailor: '', rate: '', date: today(), work_type: 'Stitching' }])
   const [saving, setSaving] = useState(false)
   const [createError, setCreateError] = useState('')
 
@@ -73,6 +74,7 @@ export default function StitchingPage() {
   const [matPrice, setMatPrice] = useState('')
   const [editMatId, setEditMatId] = useState<number | null>(null)
   const [workTailor, setWorkTailor] = useState('')
+  const [workType, setWorkType] = useState('Stitching')
   const [workRate, setWorkRate] = useState('')
   const [workDate, setWorkDate] = useState(today())
   const [editWorkId, setEditWorkId] = useState<number | null>(null)
@@ -104,7 +106,7 @@ export default function StitchingPage() {
     setCreateError('')
     setMdNo(''); setInvNo(''); setAllocationTailor(''); setRemarks('')
     setMaterials([{ name: '', qty: '', price: '' }])
-    setWorkLines([{ tailor: '', rate: '', date: today() }])
+    setWorkLines([{ tailor: '', rate: '', date: today(), work_type: 'Stitching' }])
     getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
   }
 
@@ -118,7 +120,7 @@ export default function StitchingPage() {
   const removeMaterial = (i: number) => setMaterials(prev => prev.filter((_, idx) => idx !== i))
 
   const updateWork = (i: number, patch: Partial<WorkRow>) => setWorkLines(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w))
-  const addWork = () => setWorkLines(prev => [...prev, { tailor: '', rate: '', date: today() }])
+  const addWork = () => setWorkLines(prev => [...prev, { tailor: '', rate: '', date: today(), work_type: 'Stitching' }])
   const removeWork = (i: number) => setWorkLines(prev => prev.filter((_, idx) => idx !== i))
 
   const handleCreate = async () => {
@@ -131,7 +133,7 @@ export default function StitchingPage() {
       await createStitchingReference({
         ref_no: refNo, md_no: mdNo, inv_no: invNo, tailor: parseInt(allocationTailor), remarks,
         materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0 })),
-        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), rate: parseFloat(w.rate), date: w.date })),
+        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date })),
       })
       notify(`Reference ${refNo} created`)
       resetForm()
@@ -147,7 +149,7 @@ export default function StitchingPage() {
     if (expandedId === r.id) { setExpandedId(null); return }
     setExpandedId(r.id)
     setMatName(''); setMatQty(''); setMatPrice(''); setEditMatId(null)
-    setWorkTailor(''); setWorkRate(''); setWorkDate(today()); setEditWorkId(null)
+    setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null)
   }
 
   const handleDeleteRef = async (id: number, e: React.MouseEvent) => {
@@ -194,21 +196,21 @@ export default function StitchingPage() {
     if (!workTailor || !workRate || !workDate) { fail('Tailor, Rate and Date are required'); return }
     setSavingWork(true)
     try {
-      const payload = { reference: referenceId, tailor: parseInt(workTailor), rate: parseFloat(workRate), date: workDate }
+      const payload = { reference: referenceId, tailor: parseInt(workTailor), work_type: workType || 'Stitching', rate: parseFloat(workRate), date: workDate }
       if (editWorkId) { await updateStitchingWorkLine(editWorkId, payload); notify('Work line updated') }
       else { await createStitchingWorkLine(payload); notify('Work line added') }
-      setWorkTailor(''); setWorkRate(''); setWorkDate(today()); setEditWorkId(null); await fetchData()
+      setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null); await fetchData()
     } catch { fail('Failed to save work line') } finally { setSavingWork(false) }
   }
 
   const handleEditWork = (w: StitchingWorkLine, e: React.MouseEvent) => {
     e.stopPropagation()
-    setWorkTailor(String(w.tailor)); setWorkRate(String(w.rate)); setWorkDate(w.date); setEditWorkId(w.id)
+    setWorkTailor(String(w.tailor)); setWorkType(w.work_type || 'Stitching'); setWorkRate(String(w.rate)); setWorkDate(w.date); setEditWorkId(w.id)
   }
 
   const cancelEditWork = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setWorkTailor(''); setWorkRate(''); setWorkDate(today()); setEditWorkId(null)
+    setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null)
   }
 
   const handleDeleteWork = async (lineId: number, e: React.MouseEvent) => {
@@ -216,7 +218,7 @@ export default function StitchingPage() {
     if (!confirm('Delete this work line?')) return
     try {
       await deleteStitchingWorkLine(lineId)
-      if (editWorkId === lineId) { setWorkTailor(''); setWorkRate(''); setWorkDate(today()); setEditWorkId(null) }
+      if (editWorkId === lineId) { setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null) }
       await fetchData()
     } catch { fail('Failed to delete') }
   }
@@ -227,10 +229,17 @@ export default function StitchingPage() {
   const totalQty = filteredRecords.reduce((s, r) => s + r.materials.reduce((s2, m) => s2 + Number(m.qty), 0), 0)
   const totalAmt = filteredRecords.reduce((s, r) => s + r.materials_total + r.work_total, 0)
   const handlePrint = () => window.print()
+  const workTypeOptions = Array.from(new Set([
+    ...DEFAULT_WORK_TYPES,
+    ...records.flatMap(r => r.work_lines.map(w => w.work_type)),
+  ].filter(Boolean))).sort()
 
   return (
     <main style={{ padding: '24px', minHeight: '100vh' }}>
       <style>{`@media print { .no-print { display: none !important; } }`}</style>
+      <datalist id="work-type-options">
+        {workTypeOptions.map(t => <option key={t} value={t} />)}
+      </datalist>
       <div style={{ maxWidth: 1500, margin: '0 auto' }}>
 
         {/* Header */}
@@ -319,6 +328,10 @@ export default function StitchingPage() {
                         <option value="">Select tailor</option>
                         {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
                       </select>
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
+                      <input className="field" list="work-type-options" value={w.work_type} onChange={e => updateWork(i, { work_type: e.target.value })}
+                        placeholder="Work type — e.g. Stitching, Cutting…" />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                       <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateWork(i, { rate: e.target.value })} placeholder="Rate" />
@@ -489,11 +502,12 @@ export default function StitchingPage() {
                                         <button onClick={cancelEditWork} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
                                       )}
                                     </div>
-                                    <form onSubmit={e => handleSaveWork(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                    <form onSubmit={e => handleSaveWork(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '1.3fr 1.2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
                                       <select className="field" value={workTailor} onChange={e => setWorkTailor(e.target.value)}>
                                         <option value="">Tailor</option>
                                         {tailors.map(t => <option key={t.id} value={t.id}>{t.code}</option>)}
                                       </select>
+                                      <input className="field" list="work-type-options" value={workType} onChange={e => setWorkType(e.target.value)} placeholder="Work type" />
                                       <input type="number" min="0" step="0.01" className="field" value={workRate} onChange={e => setWorkRate(e.target.value)} placeholder="Rate" />
                                       <input type="date" className="field" value={workDate} onChange={e => setWorkDate(e.target.value)} />
                                       <button type="submit" disabled={savingWork} className="btn-gold" style={{ background: '#16a34a', padding: '8px 12px', fontSize: 12 }}>
@@ -509,6 +523,7 @@ export default function StitchingPage() {
                                             <tr key={w.id} style={{ background: editWorkId === w.id ? '#f0fdf4' : undefined }}>
                                               <td style={{ fontSize: 12, color: '#6b7280' }}>{w.date}</td>
                                               <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{w.tailor_code}</span></td>
+                                              <td style={{ fontSize: 12, color: '#374151' }}>{w.work_type || '—'}</td>
                                               <td style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>AED {w.rate}</td>
                                               <td>
                                                 <div style={{ display: 'flex', gap: 4 }}>
@@ -521,7 +536,7 @@ export default function StitchingPage() {
                                         </tbody>
                                         <tfoot>
                                           <tr>
-                                            <td colSpan={2} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
+                                            <td colSpan={3} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
                                             <td style={{ fontWeight: 700, fontSize: 12, color: '#16a34a' }}>AED {r.work_total.toFixed(2)}</td>
                                             <td />
                                           </tr>

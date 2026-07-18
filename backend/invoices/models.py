@@ -90,6 +90,7 @@ class AllocationMaterial(models.Model):
 class StitchingWorkLine(models.Model):
     reference = models.ForeignKey(StitchingReference, on_delete=models.CASCADE, related_name='work_lines')
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitching_work_lines')
+    work_type = models.CharField(max_length=50, blank=True, default='Stitching')
     rate = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField()
 
