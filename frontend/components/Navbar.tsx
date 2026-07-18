@@ -10,6 +10,7 @@ const modules = [
   { href: '/tailors',     label: 'Tailors'     },
   { href: '/ratesheet',   label: 'Rate Sheet'  },
   { href: '/stitching',   label: 'Stitching'   },
+  { href: '/finished-goods', label: 'Finished Goods' },
   { href: '/report',      label: 'Reports'     },
 ]
 

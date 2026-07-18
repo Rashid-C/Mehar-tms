@@ -1,10 +1,11 @@
 'use client'
 import { Fragment, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   getStitchingReferences, createStitchingReference, deleteStitchingReference,
   createStitchingMaterial, updateStitchingMaterial, deleteStitchingMaterial,
   createStitchingWorkLine, updateStitchingWorkLine, deleteStitchingWorkLine,
-  getNextStitchingRefNo, getStitchingSummary, getTailors, getItems,
+  getNextStitchingRefNo, getStitchingSummary, getTailors, getItems, finishStitchingReference,
   StitchingReference, AllocationMaterial, StitchingWorkLine, Tailor, Item,
 } from '@/lib/api'
 
@@ -45,6 +46,7 @@ function MaterialNameInput({ value, items, onChange, onPick, excludeNames = [] }
 }
 
 export default function StitchingPage() {
+  const router = useRouter()
   const [records, setRecords] = useState<StitchingReference[]>([])
   const [tailors, setTailors] = useState<Tailor[]>([])
   const [productionItems, setProductionItems] = useState<Item[]>([])
@@ -157,6 +159,16 @@ export default function StitchingPage() {
     if (!confirm('Delete this stitching reference and all its materials/work lines?')) return
     try { await deleteStitchingReference(id); notify('Reference deleted'); if (expandedId === id) setExpandedId(null); await fetchData() }
     catch { fail('Failed to delete') }
+  }
+
+  const handleFinish = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Mark this reference as finished? It will move to Finished Goods.')) return
+    try {
+      await finishStitchingReference(id)
+      if (expandedId === id) setExpandedId(null)
+      router.push('/finished-goods')
+    } catch { fail('Failed to finish this reference') }
   }
 
   const handleSaveMaterial = async (referenceId: number, e: React.FormEvent) => {
@@ -438,7 +450,10 @@ export default function StitchingPage() {
                             <td style={{ color: '#6b7280', fontFamily: 'monospace' }}>{r.inv_no || '—'}</td>
                             <td style={{ color: '#9ca3af' }}>{r.remarks || '—'}</td>
                             <td className="no-print">
-                              <button onClick={e => handleDeleteRef(r.id, e)} className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }}>Del</button>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button onClick={e => handleFinish(r.id, e)} className="btn-gold" style={{ background: '#0ea5e9', padding: '4px 10px', fontSize: 12 }}>Finish</button>
+                                <button onClick={e => handleDeleteRef(r.id, e)} className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }}>Del</button>
+                              </div>
                             </td>
                           </tr>
                           {expandedId === r.id && (

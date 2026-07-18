@@ -65,6 +65,7 @@ class StitchingReference(models.Model):
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitching_references')  # Allocation Cut
     inv_no = models.CharField(max_length=20, blank=True)
     remarks = models.TextField(blank=True)
+    is_finished = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -99,6 +100,23 @@ class StitchingWorkLine(models.Model):
 
     class Meta:
         ordering = ['-date', 'id']
+
+
+class FinishedGood(models.Model):
+    reference = models.OneToOneField(StitchingReference, on_delete=models.CASCADE, related_name='finished_good')
+    item_name = models.CharField(max_length=100, blank=True, default='')
+    qty = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    date = models.DateField()
+    remarks = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.reference.ref_no} | {self.item_name}"
+
+    class Meta:
+        ordering = ['-created_at']
 
 
 class JobInvoice(models.Model):

@@ -148,11 +148,28 @@ export interface StitchingReference {
   tailor_name: string
   inv_no: string
   remarks: string
+  is_finished: boolean
   created_at: string
   materials: AllocationMaterial[]
   work_lines: StitchingWorkLine[]
   materials_total: number
   work_total: number
+}
+
+export interface FinishedGood {
+  id: number
+  reference: number
+  ref_no: string
+  md_no: string
+  tailor_code: string
+  tailor_name: string
+  item_name: string
+  qty: number
+  cost_price: number
+  selling_price: number
+  date: string
+  remarks: string
+  created_at: string
 }
 
 export const getStitchingReferences = (params?: object) => api.get<StitchingReference[]>('/stitching-references/', { params })
@@ -173,6 +190,12 @@ export const deleteStitchingMaterial = (id: number) => api.delete(`/stitching-ma
 export const createStitchingWorkLine = (data: object) => api.post<StitchingWorkLine>('/stitching-work-lines/', data)
 export const updateStitchingWorkLine = (id: number, data: object) => api.put<StitchingWorkLine>(`/stitching-work-lines/${id}/`, data)
 export const deleteStitchingWorkLine = (id: number) => api.delete(`/stitching-work-lines/${id}/`)
+
+export const finishStitchingReference = (id: number) => api.post<FinishedGood>(`/stitching-references/${id}/finish/`)
+
+export const getFinishedGoods = (params?: object) => api.get<FinishedGood[]>('/finished-goods/', { params })
+export const updateFinishedGood = (id: number, data: object) => api.put<FinishedGood>(`/finished-goods/${id}/`, data)
+export const deleteFinishedGood = (id: number) => api.delete(`/finished-goods/${id}/`)
 
 
 

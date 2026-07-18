@@ -4,13 +4,15 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Sum, Max, Q
 from django.db import transaction
+from django.utils import timezone
 import re
-from .models import Tailor, Invoice, RateSheet, TailorOrder, Payment, JobInvoice, MaterialIssue, Item, StitchingReference, AllocationMaterial, StitchingWorkLine
+from .models import Tailor, Invoice, RateSheet, TailorOrder, Payment, JobInvoice, MaterialIssue, Item, StitchingReference, AllocationMaterial, StitchingWorkLine, FinishedGood
 from .serializers import (
     TailorSerializer, InvoiceSerializer, RateSheetSerializer,
     TailorOrderSerializer, PaymentSerializer, JobInvoiceSerializer,
     MaterialIssueSerializer, ItemSerializer,
     StitchingReferenceSerializer, AllocationMaterialSerializer, StitchingWorkLineSerializer,
+    FinishedGoodSerializer,
 )
 
 
@@ -389,7 +391,7 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
     ordering_fields = ['ref_no', 'created_at']
 
     def get_queryset(self):
-        queryset = StitchingReference.objects.select_related('tailor').prefetch_related('materials', 'work_lines__tailor').all()
+        queryset = StitchingReference.objects.select_related('tailor').prefetch_related('materials', 'work_lines__tailor').filter(is_finished=False)
         tailor = self.request.query_params.get('tailor')
         month = self.request.query_params.get('month')
         date = self.request.query_params.get('date')
@@ -459,6 +461,49 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
             'total_amount': total_amount,
             'total_records': references.count(),
         })
+
+    @action(detail=True, methods=['post'])
+    def finish(self, request, pk=None):
+        reference = self.get_object()
+        if hasattr(reference, 'finished_good'):
+            return Response({'detail': 'This reference is already finished.'}, status=400)
+        cost_price = (
+            sum(float(m.qty) * float(m.price) for m in reference.materials.all())
+            + sum(float(w.rate) for w in reference.work_lines.all())
+        )
+        finished = FinishedGood.objects.create(
+            reference=reference,
+            item_name=reference.md_no or reference.ref_no,
+            qty=1,
+            cost_price=cost_price,
+            selling_price=0,
+            date=timezone.now().date(),
+            remarks=reference.remarks,
+        )
+        reference.is_finished = True
+        reference.save(update_fields=['is_finished'])
+        return Response(FinishedGoodSerializer(finished).data, status=201)
+
+
+class FinishedGoodViewSet(viewsets.ModelViewSet):
+    queryset = FinishedGood.objects.select_related('reference', 'reference__tailor').all()
+    serializer_class = FinishedGoodSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['reference__ref_no', 'reference__md_no', 'item_name']
+    ordering_fields = ['date', 'created_at']
+
+    def get_queryset(self):
+        queryset = FinishedGood.objects.select_related('reference', 'reference__tailor').all()
+        tailor = self.request.query_params.get('tailor')
+        month = self.request.query_params.get('month')
+        date = self.request.query_params.get('date')
+        if tailor:
+            queryset = queryset.filter(reference__tailor__code=tailor)
+        if month:
+            queryset = queryset.filter(date__month=month)
+        if date:
+            queryset = queryset.filter(date=date)
+        return queryset
 
 
 class AllocationMaterialViewSet(viewsets.ModelViewSet):

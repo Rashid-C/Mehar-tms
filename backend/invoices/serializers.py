@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RateSheet, Tailor, Invoice, TailorOrder, Payment, JobInvoice, MaterialIssue, Item, StitchingReference, AllocationMaterial, StitchingWorkLine
+from .models import RateSheet, Tailor, Invoice, TailorOrder, Payment, JobInvoice, MaterialIssue, Item, StitchingReference, AllocationMaterial, StitchingWorkLine, FinishedGood
 
 class TailorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -106,3 +106,15 @@ class StitchingReferenceSerializer(serializers.ModelSerializer):
 
     def get_work_total(self, obj):
         return sum(float(w.rate) for w in obj.work_lines.all())
+
+
+class FinishedGoodSerializer(serializers.ModelSerializer):
+    ref_no = serializers.CharField(source='reference.ref_no', read_only=True)
+    md_no = serializers.CharField(source='reference.md_no', read_only=True)
+    tailor_code = serializers.CharField(source='reference.tailor.code', read_only=True)
+    tailor_name = serializers.CharField(source='reference.tailor.name', read_only=True)
+
+    class Meta:
+        model = FinishedGood
+        fields = '__all__'
+        read_only_fields = ['reference', 'ref_no', 'md_no', 'tailor_code', 'tailor_name']

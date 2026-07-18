@@ -5,6 +5,7 @@ from .views import (
     InvoiceViewSet, RateSheetViewSet, TailorOrderViewSet, PaymentViewSet,
     JobInvoiceViewSet, MaterialIssueViewSet, ItemViewSet,
     StitchingReferenceViewSet, AllocationMaterialViewSet, StitchingWorkLineViewSet,
+    FinishedGoodViewSet,
 )
 
 router = DefaultRouter()
@@ -19,6 +20,7 @@ router.register(r'items', ItemViewSet)
 router.register(r'stitching-references', StitchingReferenceViewSet)
 router.register(r'stitching-materials', AllocationMaterialViewSet)
 router.register(r'stitching-work-lines', StitchingWorkLineViewSet)
+router.register(r'finished-goods', FinishedGoodViewSet)
 
 
 urlpatterns = [

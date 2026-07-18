@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tailor, Invoice, RateSheet, TailorOrder, Payment, JobInvoice, Item, StitchingReference, AllocationMaterial, StitchingWorkLine
+from .models import Tailor, Invoice, RateSheet, TailorOrder, Payment, JobInvoice, Item, StitchingReference, AllocationMaterial, StitchingWorkLine, FinishedGood
 
 @admin.register(Tailor)
 class TailorAdmin(admin.ModelAdmin):
@@ -54,10 +54,16 @@ class StitchingWorkLineInline(admin.TabularInline):
 
 @admin.register(StitchingReference)
 class StitchingReferenceAdmin(admin.ModelAdmin):
-    list_display = ['ref_no', 'md_no', 'tailor', 'inv_no', 'created_at']
+    list_display = ['ref_no', 'md_no', 'tailor', 'inv_no', 'is_finished', 'created_at']
     search_fields = ['ref_no', 'md_no', 'inv_no', 'tailor__code']
-    list_filter = ['tailor']
+    list_filter = ['tailor', 'is_finished']
     inlines = [AllocationMaterialInline, StitchingWorkLineInline]
+
+@admin.register(FinishedGood)
+class FinishedGoodAdmin(admin.ModelAdmin):
+    list_display = ['reference', 'item_name', 'qty', 'cost_price', 'selling_price', 'date']
+    search_fields = ['reference__ref_no', 'reference__md_no', 'item_name']
+    list_filter = ['date']
 
 @admin.register(AllocationMaterial)
 class AllocationMaterialAdmin(admin.ModelAdmin):
