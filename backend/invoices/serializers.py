@@ -102,7 +102,7 @@ class StitchingReferenceSerializer(serializers.ModelSerializer):
         read_only_fields = ['tailor_code', 'tailor_name']
 
     def get_materials_total(self, obj):
-        return sum(float(m.qty) for m in obj.materials.all())
+        return sum(float(m.qty) * float(m.price) for m in obj.materials.all())
 
     def get_work_total(self, obj):
         return sum(float(w.rate) for w in obj.work_lines.all())

@@ -416,7 +416,7 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
             for m in materials:
                 if not m.get('name'):
                     continue
-                mat_serializer = AllocationMaterialSerializer(data={'reference': reference.id, 'name': m.get('name'), 'qty': m.get('qty') or 0})
+                mat_serializer = AllocationMaterialSerializer(data={'reference': reference.id, 'name': m.get('name'), 'qty': m.get('qty') or 0, 'price': m.get('price') or 0})
                 mat_serializer.is_valid(raise_exception=True)
                 mat_serializer.save()
 

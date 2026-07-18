@@ -12,10 +12,10 @@ const today = () => new Date().toISOString().slice(0, 10)
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-type MaterialRow = { name: string; qty: string }
+type MaterialRow = { name: string; qty: string; price: string }
 type WorkRow = { tailor: string; rate: string; date: string }
 
-function MaterialNameInput({ value, items, onChange, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; excludeNames?: string[] }) {
+function MaterialNameInput({ value, items, onChange, onPick, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; onPick?: (item: Item) => void; excludeNames?: string[] }) {
   const [showList, setShowList] = useState(false)
   const excluded = new Set(excludeNames.filter(Boolean).map(n => n.toLowerCase()))
   const matches = items.filter(it => (!value || it.name.toLowerCase().includes(value.toLowerCase())) && !excluded.has(it.name.toLowerCase()))
@@ -30,7 +30,7 @@ function MaterialNameInput({ value, items, onChange, excludeNames = [] }: { valu
           {matches.map(it => (
             <button key={it.id} type="button"
               onMouseDown={e => e.preventDefault()}
-              onClick={() => { onChange(it.name); setShowList(false) }}
+              onClick={() => { onChange(it.name); onPick?.(it); setShowList(false) }}
               style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, color: '#374151', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
               onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
               onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
@@ -62,7 +62,7 @@ export default function StitchingPage() {
   const [invNo, setInvNo] = useState('')
   const [allocationTailor, setAllocationTailor] = useState('')
   const [remarks, setRemarks] = useState('')
-  const [materials, setMaterials] = useState<MaterialRow[]>([{ name: '', qty: '' }])
+  const [materials, setMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '' }])
   const [workLines, setWorkLines] = useState<WorkRow[]>([{ tailor: '', rate: '', date: today() }])
   const [saving, setSaving] = useState(false)
   const [createError, setCreateError] = useState('')
@@ -70,6 +70,7 @@ export default function StitchingPage() {
   // ── Inline "add/edit material" and "add/edit work" per expanded row ────
   const [matName, setMatName] = useState('')
   const [matQty, setMatQty] = useState('')
+  const [matPrice, setMatPrice] = useState('')
   const [editMatId, setEditMatId] = useState<number | null>(null)
   const [workTailor, setWorkTailor] = useState('')
   const [workRate, setWorkRate] = useState('')
@@ -102,17 +103,17 @@ export default function StitchingPage() {
   const openCreate = () => {
     setShowCreate(true); setCreateError('')
     setMdNo(''); setInvNo(''); setAllocationTailor(''); setRemarks('')
-    setMaterials([{ name: '', qty: '' }])
+    setMaterials([{ name: '', qty: '', price: '' }])
     setWorkLines([{ tailor: '', rate: '', date: today() }])
     getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
   }
   const closeCreate = () => setShowCreate(false)
 
-  const materialsTotal = materials.reduce((s, m) => s + (parseFloat(m.qty) || 0), 0)
+  const materialsTotal = materials.reduce((s, m) => s + (parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0), 0)
   const workTotal = workLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
 
   const updateMaterial = (i: number, patch: Partial<MaterialRow>) => setMaterials(prev => prev.map((m, idx) => idx === i ? { ...m, ...patch } : m))
-  const addMaterial = () => setMaterials(prev => [...prev, { name: '', qty: '' }])
+  const addMaterial = () => setMaterials(prev => [...prev, { name: '', qty: '', price: '' }])
   const removeMaterial = (i: number) => setMaterials(prev => prev.filter((_, idx) => idx !== i))
 
   const updateWork = (i: number, patch: Partial<WorkRow>) => setWorkLines(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w))
@@ -128,7 +129,7 @@ export default function StitchingPage() {
     try {
       await createStitchingReference({
         ref_no: refNo, md_no: mdNo, inv_no: invNo, tailor: parseInt(allocationTailor), remarks,
-        materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0 })),
+        materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0 })),
         work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), rate: parseFloat(w.rate), date: w.date })),
       })
       notify(`Reference ${refNo} created`)
@@ -144,7 +145,7 @@ export default function StitchingPage() {
   const toggleExpand = (r: StitchingReference) => {
     if (expandedId === r.id) { setExpandedId(null); return }
     setExpandedId(r.id)
-    setMatName(''); setMatQty(''); setEditMatId(null)
+    setMatName(''); setMatQty(''); setMatPrice(''); setEditMatId(null)
     setWorkTailor(''); setWorkRate(''); setWorkDate(today()); setEditWorkId(null)
   }
 
@@ -160,21 +161,21 @@ export default function StitchingPage() {
     if (!matName) { fail('Material name is required'); return }
     setSavingMat(true)
     try {
-      const payload = { reference: referenceId, name: matName, qty: parseFloat(matQty) || 0 }
+      const payload = { reference: referenceId, name: matName, qty: parseFloat(matQty) || 0, price: parseFloat(matPrice) || 0 }
       if (editMatId) { await updateStitchingMaterial(editMatId, payload); notify('Material updated') }
       else { await createStitchingMaterial(payload); notify('Material added') }
-      setMatName(''); setMatQty(''); setEditMatId(null); await fetchData()
+      setMatName(''); setMatQty(''); setMatPrice(''); setEditMatId(null); await fetchData()
     } catch { fail('Failed to save material') } finally { setSavingMat(false) }
   }
 
   const handleEditMaterial = (m: AllocationMaterial, e: React.MouseEvent) => {
     e.stopPropagation()
-    setMatName(m.name); setMatQty(String(m.qty)); setEditMatId(m.id)
+    setMatName(m.name); setMatQty(String(m.qty)); setMatPrice(String(m.price)); setEditMatId(m.id)
   }
 
   const cancelEditMaterial = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setMatName(''); setMatQty(''); setEditMatId(null)
+    setMatName(''); setMatQty(''); setMatPrice(''); setEditMatId(null)
   }
 
   const handleDeleteMaterial = async (matId: number, e: React.MouseEvent) => {
@@ -182,7 +183,7 @@ export default function StitchingPage() {
     if (!confirm('Remove this material?')) return
     try {
       await deleteStitchingMaterial(matId)
-      if (editMatId === matId) { setMatName(''); setMatQty(''); setEditMatId(null) }
+      if (editMatId === matId) { setMatName(''); setMatQty(''); setMatPrice(''); setEditMatId(null) }
       await fetchData()
     } catch { fail('Failed to delete') }
   }
@@ -275,15 +276,20 @@ export default function StitchingPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {materials.map((m, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
                     <div>
                       {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Material {i + 1}</label>}
                       <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateMaterial(i, { name: v })}
+                        onPick={it => updateMaterial(i, { price: String(it.purchase_price ?? '') })}
                         excludeNames={materials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
                     </div>
                     <div>
                       {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Qty</label>}
                       <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateMaterial(i, { qty: e.target.value })} placeholder="0" />
+                    </div>
+                    <div>
+                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Price</label>}
+                      <input type="number" min="0" step="0.01" className="field" value={m.price} onChange={e => updateMaterial(i, { price: e.target.value })} placeholder="0.00" />
                     </div>
                     <button type="button" onClick={() => removeMaterial(i)} disabled={materials.length === 1}
                       className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: materials.length === 1 ? 0.3 : 1 }}>×</button>
@@ -377,6 +383,7 @@ export default function StitchingPage() {
                     <th>MD No</th>
                     <th>Allocation Cut</th>
                     <th>Materials</th>
+                    <th>Materials Total</th>
                     <th>Tailors (Work)</th>
                     <th>Work Total</th>
                     <th>Inv No</th>
@@ -395,7 +402,10 @@ export default function StitchingPage() {
                         <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{r.md_no || '—'}</td>
                         <td><span className="badge badge-blue">{r.tailor_code}</span> <span style={{ color: '#64748b', fontSize: 12 }}>{r.tailor_name}</span></td>
                         <td style={{ color: '#374151' }}>
-                          {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : `${r.materials.length} · ${r.materials_total}`}
+                          {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : r.materials.length}
+                        </td>
+                        <td style={{ color: '#7c3aed', fontWeight: 600 }}>
+                          {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : r.materials_total.toFixed(2)}
                         </td>
                         <td>
                           {r.work_lines.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> :
@@ -412,7 +422,7 @@ export default function StitchingPage() {
                       </tr>
                       {expandedId === r.id && (
                         <tr>
-                          <td colSpan={9} style={{ padding: 0, background: '#f8fafc' }}>
+                          <td colSpan={10} style={{ padding: 0, background: '#f8fafc' }}>
                             <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
 
                               {/* Materials management */}
@@ -423,10 +433,12 @@ export default function StitchingPage() {
                                     <button onClick={cancelEditMaterial} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
                                   )}
                                 </div>
-                                <form onSubmit={e => handleSaveMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                <form onSubmit={e => handleSaveMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
                                   <MaterialNameInput value={matName} items={productionItems} onChange={setMatName}
+                                    onPick={it => setMatPrice(String(it.purchase_price ?? ''))}
                                     excludeNames={r.materials.filter(mm => mm.id !== editMatId).map(mm => mm.name)} />
                                   <input type="number" min="0" step="0.01" className="field" value={matQty} onChange={e => setMatQty(e.target.value)} placeholder="Qty" />
+                                  <input type="number" min="0" step="0.01" className="field" value={matPrice} onChange={e => setMatPrice(e.target.value)} placeholder="Price" />
                                   <button type="submit" disabled={savingMat} className="btn-gold" style={{ background: '#7c3aed', padding: '8px 12px', fontSize: 12 }}>
                                     {editMatId ? '✓' : '+'}
                                   </button>
@@ -440,6 +452,7 @@ export default function StitchingPage() {
                                         <tr key={m.id} style={{ background: editMatId === m.id ? '#f5f3ff' : undefined }}>
                                           <td style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</td>
                                           <td style={{ fontSize: 12 }}>{m.qty}</td>
+                                          <td style={{ fontSize: 12 }}>{m.price}</td>
                                           <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
                                               <button onClick={e => handleEditMaterial(m, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
@@ -451,7 +464,7 @@ export default function StitchingPage() {
                                     </tbody>
                                     <tfoot>
                                       <tr>
-                                        <td style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
+                                        <td colSpan={2} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
                                         <td style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{r.materials_total}</td>
                                         <td />
                                       </tr>

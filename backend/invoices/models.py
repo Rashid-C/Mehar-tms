@@ -78,6 +78,7 @@ class AllocationMaterial(models.Model):
     reference = models.ForeignKey(StitchingReference, on_delete=models.CASCADE, related_name='materials')
     name = models.CharField(max_length=100)
     qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.reference.ref_no} | {self.name} | {self.qty}"

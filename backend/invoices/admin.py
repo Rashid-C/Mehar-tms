@@ -61,7 +61,7 @@ class StitchingReferenceAdmin(admin.ModelAdmin):
 
 @admin.register(AllocationMaterial)
 class AllocationMaterialAdmin(admin.ModelAdmin):
-    list_display = ['reference', 'name', 'qty']
+    list_display = ['reference', 'name', 'qty', 'price']
     search_fields = ['reference__ref_no', 'name']
 
 @admin.register(StitchingWorkLine)

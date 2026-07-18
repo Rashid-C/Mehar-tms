@@ -125,6 +125,7 @@ export interface AllocationMaterial {
   reference: number
   name: string
   qty: number
+  price: number
 }
 
 export interface StitchingWorkLine {
