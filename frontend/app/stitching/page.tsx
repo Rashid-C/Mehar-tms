@@ -15,9 +15,10 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 type MaterialRow = { name: string; qty: string }
 type WorkRow = { tailor: string; rate: string; date: string }
 
-function MaterialNameInput({ value, items, onChange }: { value: string; items: Item[]; onChange: (v: string) => void }) {
+function MaterialNameInput({ value, items, onChange, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; excludeNames?: string[] }) {
   const [showList, setShowList] = useState(false)
-  const matches = items.filter(it => !value || it.name.toLowerCase().includes(value.toLowerCase()))
+  const excluded = new Set(excludeNames.filter(Boolean).map(n => n.toLowerCase()))
+  const matches = items.filter(it => (!value || it.name.toLowerCase().includes(value.toLowerCase())) && !excluded.has(it.name.toLowerCase()))
   return (
     <div style={{ position: 'relative' }}>
       <input className="field" value={value} onChange={e => onChange(e.target.value)}
@@ -277,7 +278,8 @@ export default function StitchingPage() {
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 8, alignItems: 'end' }}>
                     <div>
                       {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Material {i + 1}</label>}
-                      <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateMaterial(i, { name: v })} />
+                      <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateMaterial(i, { name: v })}
+                        excludeNames={materials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
                     </div>
                     <div>
                       {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Qty</label>}
@@ -422,7 +424,8 @@ export default function StitchingPage() {
                                   )}
                                 </div>
                                 <form onSubmit={e => handleSaveMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 6, alignItems: 'end' }}>
-                                  <MaterialNameInput value={matName} items={productionItems} onChange={setMatName} />
+                                  <MaterialNameInput value={matName} items={productionItems} onChange={setMatName}
+                                    excludeNames={r.materials.filter(mm => mm.id !== editMatId).map(mm => mm.name)} />
                                   <input type="number" min="0" step="0.01" className="field" value={matQty} onChange={e => setMatQty(e.target.value)} placeholder="Qty" />
                                   <button type="submit" disabled={savingMat} className="btn-gold" style={{ background: '#7c3aed', padding: '8px 12px', fontSize: 12 }}>
                                     {editMatId ? '✓' : '+'}
