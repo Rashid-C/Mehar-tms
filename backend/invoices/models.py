@@ -150,6 +150,8 @@ class Item(models.Model):
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=30, unique=True)  # SKU
     category = models.CharField(max_length=50, blank=True)
+    roll_no = models.CharField(max_length=50, blank=True, default='')
+    model_no = models.CharField(max_length=50, blank=True, default='')  # Manufacture / Model No.
     size = models.CharField(max_length=20, blank=True)
     color = models.CharField(max_length=30, blank=True)
     base_unit = models.CharField(max_length=20, default='pcs')
@@ -158,6 +160,7 @@ class Item(models.Model):
     price_includes_tax = models.BooleanField(default=False)
     tax_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    store = models.CharField(max_length=100, blank=True, default='')
     track_inventory = models.BooleanField(default=False)
     opening_stock = models.PositiveIntegerField(null=True, blank=True)
     warehouse = models.CharField(max_length=100, blank=True)

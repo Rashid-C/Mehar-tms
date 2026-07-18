@@ -282,6 +282,8 @@ export interface Item {
   name: string
   code: string
   category: string
+  roll_no: string
+  model_no: string
   size: string
   color: string
   base_unit: string
@@ -290,6 +292,7 @@ export interface Item {
   price_includes_tax: boolean
   tax_percent: number
   discount_percent: number
+  store: string
   track_inventory: boolean
   opening_stock: number | null
   warehouse: string

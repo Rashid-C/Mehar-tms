@@ -11,9 +11,9 @@ const ITEM_TYPES: { value: ItemType; label: string }[] = [
 
 const emptyForm = {
   item_type: '' as ItemType | '',
-  name: '', code: '', category: '', size: '', color: '', base_unit: 'pcs',
+  name: '', code: '', category: '', roll_no: '', model_no: '', size: '', color: '', base_unit: 'pcs',
   purchase_price: '', selling_price: '', price_includes_tax: false, tax_percent: '', discount_percent: '',
-  track_inventory: false, opening_stock: '', warehouse: '', description: '',
+  store: '', track_inventory: false, opening_stock: '', warehouse: '', description: '',
 }
 
 const finalPrice = (item: Pick<Item, 'selling_price' | 'discount_percent' | 'tax_percent' | 'price_includes_tax'>) => {
@@ -35,6 +35,7 @@ export default function ItemsPage() {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [modalError, setModalError] = useState('')
+  const [newCategoryMode, setNewCategoryMode] = useState(false)
 
   const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3000) }
   const fail = (msg: string) => { setError(msg); setSuccess('') }
@@ -46,19 +47,20 @@ export default function ItemsPage() {
 
   useEffect(() => { load() }, [])
 
-  const openCreate = () => { setForm(emptyForm); setEditingId(null); setModalError(''); setModalOpen(true) }
+  const openCreate = () => { setForm(emptyForm); setEditingId(null); setModalError(''); setNewCategoryMode(false); setModalOpen(true) }
   const openEdit = (i: Item) => {
     setForm({
       item_type: i.item_type,
-      name: i.name, code: i.code, category: i.category || '', size: i.size || '', color: i.color || '',
+      name: i.name, code: i.code, category: i.category || '', roll_no: i.roll_no || '', model_no: i.model_no || '',
+      size: i.size || '', color: i.color || '',
       base_unit: i.base_unit || 'pcs',
       purchase_price: String(i.purchase_price), selling_price: String(i.selling_price),
       price_includes_tax: i.price_includes_tax, tax_percent: String(i.tax_percent),
-      discount_percent: String(i.discount_percent), track_inventory: i.track_inventory,
+      discount_percent: String(i.discount_percent), store: i.store || '', track_inventory: i.track_inventory,
       opening_stock: i.opening_stock !== null ? String(i.opening_stock) : '',
       warehouse: i.warehouse || '', description: i.description || '',
     })
-    setEditingId(i.id); setModalError(''); setModalOpen(true)
+    setEditingId(i.id); setModalError(''); setNewCategoryMode(false); setModalOpen(true)
   }
   const closeModal = () => setModalOpen(false)
 
@@ -70,10 +72,11 @@ export default function ItemsPage() {
       const payload = {
         item_type: form.item_type,
         name: form.name, code: form.code.toUpperCase(), category: form.category,
+        roll_no: form.roll_no, model_no: form.model_no,
         size: form.size, color: form.color, base_unit: form.base_unit,
         purchase_price: parseFloat(form.purchase_price) || 0, selling_price: parseFloat(form.selling_price) || 0,
         price_includes_tax: form.price_includes_tax, tax_percent: parseFloat(form.tax_percent) || 0,
-        discount_percent: parseFloat(form.discount_percent) || 0, track_inventory: form.track_inventory,
+        discount_percent: parseFloat(form.discount_percent) || 0, store: form.store, track_inventory: form.track_inventory,
         opening_stock: form.track_inventory && form.opening_stock ? parseInt(form.opening_stock) : null,
         warehouse: form.track_inventory ? form.warehouse : '', description: form.description,
       }
@@ -101,7 +104,8 @@ export default function ItemsPage() {
     if (search) {
       const q = search.toLowerCase()
       return i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q) ||
-             (i.category || '').toLowerCase().includes(q)
+             (i.category || '').toLowerCase().includes(q) ||
+             (i.roll_no || '').toLowerCase().includes(q) || (i.model_no || '').toLowerCase().includes(q)
     }
     return true
   })
@@ -137,7 +141,7 @@ export default function ItemsPage() {
           <span style={{ background: '#f0fdfa', color: '#0d9488', border: '1px solid #99f6e4', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
             {filtered.length}
           </span>
-          <input className="field" style={{ flex: '1 1 200px', minWidth: 0 }} placeholder="Search item, code, category…"
+          <input className="field" style={{ flex: '1 1 200px', minWidth: 0 }} placeholder="Search item, code, category, roll no, model no…"
             value={search} onChange={e => setSearch(e.target.value)} />
           <select className="field" style={{ width: 'auto' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value as ItemType | '')}>
             <option value="">All Types</option>
@@ -193,6 +197,13 @@ export default function ItemsPage() {
                   <span style={{ color: '#64748b', fontSize: 12 }}>per {item.base_unit}</span>
                 </div>
 
+                {(item.roll_no || item.model_no) && (
+                  <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#64748b' }}>
+                    {item.roll_no && <span>Roll: <strong style={{ color: '#1e293b' }}>{item.roll_no}</strong></span>}
+                    {item.model_no && <span>Model: <strong style={{ color: '#1e293b' }}>{item.model_no}</strong></span>}
+                  </div>
+                )}
+
                 <div style={{ background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 11, color: '#64748b' }}>Purchase Price</span>
@@ -233,6 +244,10 @@ export default function ItemsPage() {
                   </div>
                 ) : (
                   <span style={{ fontSize: 11, color: '#9ca3af' }}>Inventory not tracked</span>
+                )}
+
+                {item.store && (
+                  <span style={{ fontSize: 11, color: '#64748b' }}>Store: <strong style={{ color: '#1e293b' }}>{item.store}</strong></span>
                 )}
 
                 {item.description && (
@@ -296,14 +311,43 @@ export default function ItemsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Category</label>
-                  <input className="field" value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-                    placeholder="e.g. Fabric" />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {newCategoryMode ? (
+                      <input className="field" style={{ flex: 1 }} value={form.category} autoFocus
+                        onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                        placeholder="New category name" />
+                    ) : (
+                      <select className="field" style={{ flex: 1 }} value={form.category}
+                        onChange={e => setForm(p => ({ ...p, category: e.target.value }))}>
+                        <option value="">Select category</option>
+                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
+                    <button type="button"
+                      onClick={() => { setNewCategoryMode(v => !v); setForm(p => ({ ...p, category: '' })) }}
+                      className="btn-ghost" style={{ padding: '6px 12px', fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
+                      {newCategoryMode ? '×' : '+'}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Base Unit</label>
                   <select className="field" value={form.base_unit} onChange={e => setForm(p => ({ ...p, base_unit: e.target.value }))}>
                     {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Roll No</label>
+                  <input className="field" value={form.roll_no} onChange={e => setForm(p => ({ ...p, roll_no: e.target.value }))}
+                    placeholder="e.g. RL-045" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Manufacture (Model No.)</label>
+                  <input className="field" value={form.model_no} onChange={e => setForm(p => ({ ...p, model_no: e.target.value }))}
+                    placeholder="e.g. MD-2201" />
                 </div>
               </div>
 
@@ -318,6 +362,12 @@ export default function ItemsPage() {
                   <input className="field" value={form.color} onChange={e => setForm(p => ({ ...p, color: e.target.value }))}
                     placeholder="e.g. Red" />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ ...lbl, display: 'block', marginBottom: 5 }}>Store</label>
+                <input className="field" value={form.store} onChange={e => setForm(p => ({ ...p, store: e.target.value }))}
+                  placeholder="e.g. Deira Main Store" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
