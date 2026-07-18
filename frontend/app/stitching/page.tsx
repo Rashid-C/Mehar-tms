@@ -53,10 +53,10 @@ export default function StitchingPage() {
   const [success, setSuccess] = useState('')
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1)
   const [filterTailor, setFilterTailor] = useState('')
+  const [searchItem, setSearchItem] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
-  // ── Inline "New Reference" panel ──────────────────────────────────────
-  const [showCreate, setShowCreate] = useState(false)
+  // ── Entry form (left pane, always visible) ────────────────────────────
   const [refNo, setRefNo] = useState('')
   const [mdNo, setMdNo] = useState('')
   const [invNo, setInvNo] = useState('')
@@ -99,15 +99,16 @@ export default function StitchingPage() {
     getItems({ item_type: 'production' }).then(r => setProductionItems(r.data))
   }, [])
 
-  // ── Create panel helpers ────────────────────────────────────────────────
-  const openCreate = () => {
-    setShowCreate(true); setCreateError('')
+  // ── Entry form helpers ──────────────────────────────────────────────────
+  const resetForm = () => {
+    setCreateError('')
     setMdNo(''); setInvNo(''); setAllocationTailor(''); setRemarks('')
     setMaterials([{ name: '', qty: '', price: '' }])
     setWorkLines([{ tailor: '', rate: '', date: today() }])
     getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
   }
-  const closeCreate = () => setShowCreate(false)
+
+  useEffect(() => { getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no)) }, [])
 
   const materialsTotal = materials.reduce((s, m) => s + (parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0), 0)
   const workTotal = workLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
@@ -133,7 +134,7 @@ export default function StitchingPage() {
         work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), rate: parseFloat(w.rate), date: w.date })),
       })
       notify(`Reference ${refNo} created`)
-      setShowCreate(false)
+      resetForm()
       await fetchData()
     } catch (err: unknown) {
       const e = err as { response?: { data?: unknown } }
@@ -220,53 +221,55 @@ export default function StitchingPage() {
     } catch { fail('Failed to delete') }
   }
 
+  // ── Register (right pane) search + totals ───────────────────────────────
+  const itemNames = Array.from(new Set(productionItems.map(it => it.name))).sort()
+  const filteredRecords = records.filter(r => !searchItem || r.materials.some(m => m.name === searchItem))
+  const totalQty = filteredRecords.reduce((s, r) => s + r.materials.reduce((s2, m) => s2 + Number(m.qty), 0), 0)
+  const totalAmt = filteredRecords.reduce((s, r) => s + r.materials_total + r.work_total, 0)
+  const handlePrint = () => window.print()
+
   return (
     <main style={{ padding: '24px', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1150, margin: '0 auto' }}>
+      <style>{`@media print { .no-print { display: none !important; } }`}</style>
+      <div style={{ maxWidth: 1500, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between" style={{ marginBottom: 20, gap: 12 }}>
-          <div>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Stitching</p>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Shop Stitching</h1>
-            <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Each reference groups a material allocation with one or more tailors&apos; stitching work</p>
-          </div>
-          <button onClick={showCreate ? closeCreate : openCreate} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>
-            {showCreate ? '× Cancel' : '+ Production'}
-          </button>
+        <div className="no-print" style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Stitching</p>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Shop Stitching</h1>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Each reference groups a material allocation with one or more tailors&apos; stitching work</p>
         </div>
 
-        {success && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{success}</div>}
-        {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{error}</div>}
+        {success && <div className="no-print" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{success}</div>}
+        {error && <div className="no-print" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{error}</div>}
 
-        {/* Inline creation panel */}
-        {showCreate && (
-          <div className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5">
+
+          {/* ── Left pane: Stitching Entry form (always visible) ──────────── */}
+          <div className="no-print card" style={{ overflow: 'hidden', alignSelf: 'start' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>New Production Reference</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>Stitching Entry</span>
               <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
                 {refNo || '…'}
               </span>
             </div>
-            <div style={{ padding: 20 }}>
+            <div style={{ padding: 16 }}>
               {createError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{createError}</div>}
 
-              <div className="grid grid-cols-3 gap-3" style={{ marginBottom: 16 }}>
-                <div>
-                  <label style={lbl}>Model Number</label>
-                  <input className="field" value={mdNo} onChange={e => setMdNo(e.target.value)} placeholder="Editable model no…" />
-                </div>
-                <div>
-                  <label style={lbl}>Inv No</label>
-                  <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
-                </div>
-                <div>
-                  <label style={lbl}>Allocation Cut (Tailor) *</label>
-                  <select className="field" value={allocationTailor} onChange={e => setAllocationTailor(e.target.value)}>
-                    <option value="">Select tailor</option>
-                    {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
-                  </select>
-                </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={lbl}>Model Number</label>
+                <input className="field" value={mdNo} onChange={e => setMdNo(e.target.value)} placeholder="Editable model no…" />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={lbl}>Inv No</label>
+                <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={lbl}>Allocation Cut (Tailor / Party) *</label>
+                <select className="field" value={allocationTailor} onChange={e => setAllocationTailor(e.target.value)}>
+                  <option value="">Select tailor</option>
+                  {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                </select>
               </div>
 
               {/* Materials */}
@@ -274,25 +277,23 @@ export default function StitchingPage() {
                 <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
                 <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{materialsTotal.toFixed(2)}</strong></span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                 {materials.map((m, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                    <div>
-                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Material {i + 1}</label>}
+                  <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Material {i + 1}</span>
+                      <button type="button" onClick={() => removeMaterial(i)} disabled={materials.length === 1}
+                        className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: materials.length === 1 ? 0.3 : 1 }}>×</button>
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
                       <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateMaterial(i, { name: v })}
                         onPick={it => updateMaterial(i, { price: String(it.purchase_price ?? '') })}
                         excludeNames={materials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
                     </div>
-                    <div>
-                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Qty</label>}
-                      <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateMaterial(i, { qty: e.target.value })} placeholder="0" />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateMaterial(i, { qty: e.target.value })} placeholder="Qty" />
+                      <input type="number" min="0" step="0.01" className="field" value={m.price} onChange={e => updateMaterial(i, { price: e.target.value })} placeholder="Price" />
                     </div>
-                    <div>
-                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Price</label>}
-                      <input type="number" min="0" step="0.01" className="field" value={m.price} onChange={e => updateMaterial(i, { price: e.target.value })} placeholder="0.00" />
-                    </div>
-                    <button type="button" onClick={() => removeMaterial(i)} disabled={materials.length === 1}
-                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: materials.length === 1 ? 0.3 : 1 }}>×</button>
                   </div>
                 ))}
                 <button type="button" onClick={addMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
@@ -305,26 +306,24 @@ export default function StitchingPage() {
                 <label style={{ ...lbl, marginBottom: 0 }}>Stitching Work</label>
                 <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {workTotal.toFixed(2)}</strong></span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                 {workLines.map((w, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                    <div>
-                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Work {i + 1} — Tailor</label>}
+                  <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Work {i + 1}</span>
+                      <button type="button" onClick={() => removeWork(i)} disabled={workLines.length === 1}
+                        className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: workLines.length === 1 ? 0.3 : 1 }}>×</button>
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
                       <select className="field" value={w.tailor} onChange={e => updateWork(i, { tailor: e.target.value })}>
-                        <option value="">Select</option>
+                        <option value="">Select tailor</option>
                         {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
                       </select>
                     </div>
-                    <div>
-                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Rate (AED)</label>}
-                      <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateWork(i, { rate: e.target.value })} placeholder="0.00" />
-                    </div>
-                    <div>
-                      {i === 0 && <label style={{ ...lbl, fontSize: 11 }}>Date</label>}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateWork(i, { rate: e.target.value })} placeholder="Rate" />
                       <input type="date" className="field" value={w.date} onChange={e => updateWork(i, { date: e.target.value })} />
                     </div>
-                    <button type="button" onClick={() => removeWork(i)} disabled={workLines.length === 1}
-                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: workLines.length === 1 ? 0.3 : 1 }}>×</button>
                   </div>
                 ))}
                 <button type="button" onClick={addWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
@@ -332,209 +331,229 @@ export default function StitchingPage() {
                 </button>
               </div>
 
-              <div>
-                <label style={lbl}>Remarks</label>
-                <input className="field" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional notes…" style={{ marginBottom: 16 }} />
+              <div style={{ marginBottom: 16 }}>
+                <label style={lbl}>Remarks / Notes</label>
+                <input className="field" value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Optional notes…" />
               </div>
 
-              <button onClick={handleCreate} disabled={saving} className="btn-gold" style={{ background: '#16a34a' }}>
-                {saving ? 'Saving…' : 'Save Reference'}
-              </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button onClick={resetForm} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>Clear</button>
+                <button onClick={handleCreate} disabled={saving} className="btn-gold" style={{ background: '#16a34a' }}>
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Summary Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 16 }}>
-          {[
-            { label: 'Total References', value: summary.total_records, color: '#1e293b' },
-            { label: 'Total Work Amount', value: `AED ${summary.total_amount}`, color: '#16a34a' },
-          ].map(c => (
-            <div key={c.label} style={{ background: '#ffffff', border: '1px solid #e8ecf0', borderRadius: 8, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-              <p style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{c.label}</p>
-              <p style={{ fontSize: 22, fontWeight: 700, color: c.color, margin: 0 }}>{c.value}</p>
+          {/* ── Right pane: Stitching Register ─────────────────────────────── */}
+          <div>
+            {/* Summary Cards */}
+            <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 16 }}>
+              {[
+                { label: 'Total References', value: summary.total_records, color: '#1e293b' },
+                { label: 'Total Work Amount', value: `AED ${summary.total_amount}`, color: '#16a34a' },
+              ].map(c => (
+                <div key={c.label} style={{ background: '#ffffff', border: '1px solid #e8ecf0', borderRadius: 8, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                  <p style={{ fontSize: 11, color: '#6b7280', fontWeight: 500, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{c.label}</p>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: c.color, margin: 0 }}>{c.value}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Filters + Table */}
-        <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>References</span>
-            <select className="field" style={{ width: 'auto' }} value={filterMonth} onChange={e => setFilterMonth(parseInt(e.target.value))}>
-              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-            </select>
-            <select className="field" style={{ width: 'auto' }} value={filterTailor} onChange={e => setFilterTailor(e.target.value)}>
-              <option value="">All Tailors</option>
-              {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
-            </select>
-          </div>
+            {/* Filters + Table */}
+            <div className="card" style={{ overflow: 'hidden' }}>
+              <div className="no-print" style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Stitching Register</span>
+                <select className="field" style={{ width: 'auto' }} value={filterMonth} onChange={e => setFilterMonth(parseInt(e.target.value))}>
+                  {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                </select>
+                <select className="field" style={{ width: 'auto' }} value={filterTailor} onChange={e => setFilterTailor(e.target.value)} title="Search By Party">
+                  <option value="">Search By Party — All</option>
+                  {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
+                </select>
+                <select className="field" style={{ width: 'auto' }} value={searchItem} onChange={e => setSearchItem(e.target.value)} title="Search By Item">
+                  <option value="">Search By Item — All</option>
+                  {itemNames.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+                <button onClick={handlePrint} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>🖶 Print</button>
+              </div>
 
-          {loading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '48px', color: '#94a3b8' }}>
-              <span className="spinner" /><span style={{ fontSize: 13 }}>Loading…</span>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="z-table" style={{ minWidth: 900 }}>
-                <thead>
-                  <tr>
-                    <th>Ref No</th>
-                    <th>MD No</th>
-                    <th>Allocation Cut</th>
-                    <th>Materials</th>
-                    <th>Materials Total</th>
-                    <th>Tailors (Work)</th>
-                    <th>Work Total</th>
-                    <th>Inv No</th>
-                    <th>Remarks</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.map(r => (
-                    <Fragment key={r.id}>
-                      <tr onClick={() => toggleExpand(r)} style={{ cursor: 'pointer', background: expandedId === r.id ? '#f8fafc' : undefined }}>
-                        <td style={{ fontWeight: 700, color: '#7c3aed', fontFamily: 'monospace' }}>
-                          <span style={{ display: 'inline-block', marginRight: 6, transition: 'transform 0.15s', transform: expandedId === r.id ? 'rotate(90deg)' : 'none' }}>›</span>
-                          {r.ref_no}
-                        </td>
-                        <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{r.md_no || '—'}</td>
-                        <td><span className="badge badge-blue">{r.tailor_code}</span> <span style={{ color: '#64748b', fontSize: 12 }}>{r.tailor_name}</span></td>
-                        <td style={{ color: '#374151' }}>
-                          {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : r.materials.length}
-                        </td>
-                        <td style={{ color: '#7c3aed', fontWeight: 600 }}>
-                          {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : r.materials_total.toFixed(2)}
-                        </td>
-                        <td>
-                          {r.work_lines.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> :
-                            Array.from(new Set(r.work_lines.map(w => w.tailor_code))).map(code => (
-                              <span key={code} className="badge badge-cyan" style={{ marginRight: 4 }}>{code}</span>
-                            ))}
-                        </td>
-                        <td style={{ color: '#16a34a', fontWeight: 600 }}>AED {r.work_total.toFixed(2)}</td>
-                        <td style={{ color: '#6b7280', fontFamily: 'monospace' }}>{r.inv_no || '—'}</td>
-                        <td style={{ color: '#9ca3af' }}>{r.remarks || '—'}</td>
-                        <td>
-                          <button onClick={e => handleDeleteRef(r.id, e)} className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }}>Del</button>
-                        </td>
+              {loading ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '48px', color: '#94a3b8' }}>
+                  <span className="spinner" /><span style={{ fontSize: 13 }}>Loading…</span>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="z-table" style={{ minWidth: 900 }}>
+                    <thead>
+                      <tr>
+                        <th>Ref No</th>
+                        <th>MD No</th>
+                        <th>Allocation Cut</th>
+                        <th>Materials</th>
+                        <th>Materials Total</th>
+                        <th>Tailors (Work)</th>
+                        <th>Work Total</th>
+                        <th>Inv No</th>
+                        <th>Remarks</th>
+                        <th className="no-print"></th>
                       </tr>
-                      {expandedId === r.id && (
-                        <tr>
-                          <td colSpan={10} style={{ padding: 0, background: '#f8fafc' }}>
-                            <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
+                    </thead>
+                    <tbody>
+                      {filteredRecords.map(r => (
+                        <Fragment key={r.id}>
+                          <tr onClick={() => toggleExpand(r)} style={{ cursor: 'pointer', background: expandedId === r.id ? '#f8fafc' : undefined }}>
+                            <td style={{ fontWeight: 700, color: '#7c3aed', fontFamily: 'monospace' }}>
+                              <span style={{ display: 'inline-block', marginRight: 6, transition: 'transform 0.15s', transform: expandedId === r.id ? 'rotate(90deg)' : 'none' }}>›</span>
+                              {r.ref_no}
+                            </td>
+                            <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{r.md_no || '—'}</td>
+                            <td><span className="badge badge-blue">{r.tailor_code}</span> <span style={{ color: '#64748b', fontSize: 12 }}>{r.tailor_name}</span></td>
+                            <td style={{ color: '#374151' }}>
+                              {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : r.materials.length}
+                            </td>
+                            <td style={{ color: '#7c3aed', fontWeight: 600 }}>
+                              {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : r.materials_total.toFixed(2)}
+                            </td>
+                            <td>
+                              {r.work_lines.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> :
+                                Array.from(new Set(r.work_lines.map(w => w.tailor_code))).map(code => (
+                                  <span key={code} className="badge badge-cyan" style={{ marginRight: 4 }}>{code}</span>
+                                ))}
+                            </td>
+                            <td style={{ color: '#16a34a', fontWeight: 600 }}>AED {r.work_total.toFixed(2)}</td>
+                            <td style={{ color: '#6b7280', fontFamily: 'monospace' }}>{r.inv_no || '—'}</td>
+                            <td style={{ color: '#9ca3af' }}>{r.remarks || '—'}</td>
+                            <td className="no-print">
+                              <button onClick={e => handleDeleteRef(r.id, e)} className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }}>Del</button>
+                            </td>
+                          </tr>
+                          {expandedId === r.id && (
+                            <tr className="no-print">
+                              <td colSpan={10} style={{ padding: 0, background: '#f8fafc' }}>
+                                <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
 
-                              {/* Materials management */}
-                              <div className="card" style={{ overflow: 'hidden' }}>
-                                <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>Materials</span>
-                                  {editMatId && expandedId === r.id && (
-                                    <button onClick={cancelEditMaterial} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
-                                  )}
+                                  {/* Materials management */}
+                                  <div className="card" style={{ overflow: 'hidden' }}>
+                                    <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>Materials</span>
+                                      {editMatId && expandedId === r.id && (
+                                        <button onClick={cancelEditMaterial} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
+                                      )}
+                                    </div>
+                                    <form onSubmit={e => handleSaveMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                      <MaterialNameInput value={matName} items={productionItems} onChange={setMatName}
+                                        onPick={it => setMatPrice(String(it.purchase_price ?? ''))}
+                                        excludeNames={r.materials.filter(mm => mm.id !== editMatId).map(mm => mm.name)} />
+                                      <input type="number" min="0" step="0.01" className="field" value={matQty} onChange={e => setMatQty(e.target.value)} placeholder="Qty" />
+                                      <input type="number" min="0" step="0.01" className="field" value={matPrice} onChange={e => setMatPrice(e.target.value)} placeholder="Price" />
+                                      <button type="submit" disabled={savingMat} className="btn-gold" style={{ background: '#7c3aed', padding: '8px 12px', fontSize: 12 }}>
+                                        {editMatId ? '✓' : '+'}
+                                      </button>
+                                    </form>
+                                    {r.materials.length === 0 ? (
+                                      <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No materials yet.</p>
+                                    ) : (
+                                      <table className="z-table">
+                                        <tbody>
+                                          {r.materials.map(m => (
+                                            <tr key={m.id} style={{ background: editMatId === m.id ? '#f5f3ff' : undefined }}>
+                                              <td style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</td>
+                                              <td style={{ fontSize: 12 }}>{m.qty}</td>
+                                              <td style={{ fontSize: 12 }}>{m.price}</td>
+                                              <td>
+                                                <div style={{ display: 'flex', gap: 4 }}>
+                                                  <button onClick={e => handleEditMaterial(m, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
+                                                  <button onClick={e => handleDeleteMaterial(m.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button>
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                        <tfoot>
+                                          <tr>
+                                            <td colSpan={2} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
+                                            <td style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{r.materials_total}</td>
+                                            <td />
+                                          </tr>
+                                        </tfoot>
+                                      </table>
+                                    )}
+                                  </div>
+
+                                  {/* Work lines management */}
+                                  <div className="card" style={{ overflow: 'hidden' }}>
+                                    <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Stitching Work — add more tailors</span>
+                                      {editWorkId && expandedId === r.id && (
+                                        <button onClick={cancelEditWork} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
+                                      )}
+                                    </div>
+                                    <form onSubmit={e => handleSaveWork(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                      <select className="field" value={workTailor} onChange={e => setWorkTailor(e.target.value)}>
+                                        <option value="">Tailor</option>
+                                        {tailors.map(t => <option key={t.id} value={t.id}>{t.code}</option>)}
+                                      </select>
+                                      <input type="number" min="0" step="0.01" className="field" value={workRate} onChange={e => setWorkRate(e.target.value)} placeholder="Rate" />
+                                      <input type="date" className="field" value={workDate} onChange={e => setWorkDate(e.target.value)} />
+                                      <button type="submit" disabled={savingWork} className="btn-gold" style={{ background: '#16a34a', padding: '8px 12px', fontSize: 12 }}>
+                                        {editWorkId ? '✓' : '+'}
+                                      </button>
+                                    </form>
+                                    {r.work_lines.length === 0 ? (
+                                      <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No work lines yet.</p>
+                                    ) : (
+                                      <table className="z-table">
+                                        <tbody>
+                                          {r.work_lines.map(w => (
+                                            <tr key={w.id} style={{ background: editWorkId === w.id ? '#f0fdf4' : undefined }}>
+                                              <td style={{ fontSize: 12, color: '#6b7280' }}>{w.date}</td>
+                                              <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{w.tailor_code}</span></td>
+                                              <td style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>AED {w.rate}</td>
+                                              <td>
+                                                <div style={{ display: 'flex', gap: 4 }}>
+                                                  <button onClick={e => handleEditWork(w, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
+                                                  <button onClick={e => handleDeleteWork(w.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button>
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                        <tfoot>
+                                          <tr>
+                                            <td colSpan={2} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
+                                            <td style={{ fontWeight: 700, fontSize: 12, color: '#16a34a' }}>AED {r.work_total.toFixed(2)}</td>
+                                            <td />
+                                          </tr>
+                                        </tfoot>
+                                      </table>
+                                    )}
+                                  </div>
+
                                 </div>
-                                <form onSubmit={e => handleSaveMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
-                                  <MaterialNameInput value={matName} items={productionItems} onChange={setMatName}
-                                    onPick={it => setMatPrice(String(it.purchase_price ?? ''))}
-                                    excludeNames={r.materials.filter(mm => mm.id !== editMatId).map(mm => mm.name)} />
-                                  <input type="number" min="0" step="0.01" className="field" value={matQty} onChange={e => setMatQty(e.target.value)} placeholder="Qty" />
-                                  <input type="number" min="0" step="0.01" className="field" value={matPrice} onChange={e => setMatPrice(e.target.value)} placeholder="Price" />
-                                  <button type="submit" disabled={savingMat} className="btn-gold" style={{ background: '#7c3aed', padding: '8px 12px', fontSize: 12 }}>
-                                    {editMatId ? '✓' : '+'}
-                                  </button>
-                                </form>
-                                {r.materials.length === 0 ? (
-                                  <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No materials yet.</p>
-                                ) : (
-                                  <table className="z-table">
-                                    <tbody>
-                                      {r.materials.map(m => (
-                                        <tr key={m.id} style={{ background: editMatId === m.id ? '#f5f3ff' : undefined }}>
-                                          <td style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</td>
-                                          <td style={{ fontSize: 12 }}>{m.qty}</td>
-                                          <td style={{ fontSize: 12 }}>{m.price}</td>
-                                          <td>
-                                            <div style={{ display: 'flex', gap: 4 }}>
-                                              <button onClick={e => handleEditMaterial(m, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
-                                              <button onClick={e => handleDeleteMaterial(m.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr>
-                                        <td colSpan={2} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
-                                        <td style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{r.materials_total}</td>
-                                        <td />
-                                      </tr>
-                                    </tfoot>
-                                  </table>
-                                )}
-                              </div>
-
-                              {/* Work lines management */}
-                              <div className="card" style={{ overflow: 'hidden' }}>
-                                <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Stitching Work — add more tailors</span>
-                                  {editWorkId && expandedId === r.id && (
-                                    <button onClick={cancelEditWork} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
-                                  )}
-                                </div>
-                                <form onSubmit={e => handleSaveWork(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
-                                  <select className="field" value={workTailor} onChange={e => setWorkTailor(e.target.value)}>
-                                    <option value="">Tailor</option>
-                                    {tailors.map(t => <option key={t.id} value={t.id}>{t.code}</option>)}
-                                  </select>
-                                  <input type="number" min="0" step="0.01" className="field" value={workRate} onChange={e => setWorkRate(e.target.value)} placeholder="Rate" />
-                                  <input type="date" className="field" value={workDate} onChange={e => setWorkDate(e.target.value)} />
-                                  <button type="submit" disabled={savingWork} className="btn-gold" style={{ background: '#16a34a', padding: '8px 12px', fontSize: 12 }}>
-                                    {editWorkId ? '✓' : '+'}
-                                  </button>
-                                </form>
-                                {r.work_lines.length === 0 ? (
-                                  <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No work lines yet.</p>
-                                ) : (
-                                  <table className="z-table">
-                                    <tbody>
-                                      {r.work_lines.map(w => (
-                                        <tr key={w.id} style={{ background: editWorkId === w.id ? '#f0fdf4' : undefined }}>
-                                          <td style={{ fontSize: 12, color: '#6b7280' }}>{w.date}</td>
-                                          <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{w.tailor_code}</span></td>
-                                          <td style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>AED {w.rate}</td>
-                                          <td>
-                                            <div style={{ display: 'flex', gap: 4 }}>
-                                              <button onClick={e => handleEditWork(w, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
-                                              <button onClick={e => handleDeleteWork(w.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr>
-                                        <td colSpan={2} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
-                                        <td style={{ fontWeight: 700, fontSize: 12, color: '#16a34a' }}>AED {r.work_total.toFixed(2)}</td>
-                                        <td />
-                                      </tr>
-                                    </tfoot>
-                                  </table>
-                                )}
-                              </div>
-
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {!loading && filteredRecords.length === 0 && (
+                <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>
+                  {records.length === 0 ? 'No stitching references yet. Use the form on the left to create one.' : 'No references match the current search.'}
+                </p>
+              )}
+              {!loading && filteredRecords.length > 0 && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', justifyContent: 'flex-end', gap: 24 }}>
+                  <span style={{ fontSize: 13, color: '#374151' }}>Total Qty: <strong>{totalQty.toFixed(2)}</strong></span>
+                  <span style={{ fontSize: 13, color: '#374151' }}>Total Amt: <strong>AED {totalAmt.toFixed(2)}</strong></span>
+                </div>
+              )}
             </div>
-          )}
-          {!loading && records.length === 0 && (
-            <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>No stitching references yet. Click + Production to create one.</p>
-          )}
+          </div>
+
         </div>
 
       </div>
