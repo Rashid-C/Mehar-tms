@@ -325,9 +325,9 @@ export default function StitchingPage() {
                 </button>
               </div>
 
-              {/* Stitching Work */}
+              {/* Work Type */}
               <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ ...lbl, marginBottom: 0 }}>Stitching Work</label>
+                <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
                 <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {workTotal.toFixed(2)}</strong></span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -515,7 +515,7 @@ export default function StitchingPage() {
                                   {/* Work lines management */}
                                   <div className="card" style={{ overflow: 'hidden' }}>
                                     <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Stitching Work — add more tailors</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Work Type — add more tailors</span>
                                       {editWorkId && expandedId === r.id && (
                                         <button onClick={cancelEditWork} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
                                       )}
