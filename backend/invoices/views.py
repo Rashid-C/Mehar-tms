@@ -392,16 +392,38 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = StitchingReference.objects.select_related('tailor').prefetch_related('materials', 'work_lines__tailor').filter(is_finished=False)
-        tailor = self.request.query_params.get('tailor')
-        month = self.request.query_params.get('month')
-        date = self.request.query_params.get('date')
+        params = self.request.query_params
+        tailor = params.get('tailor')
+        month = params.get('month')
+        date = params.get('date')
+        date_from = params.get('date_from')
+        date_to = params.get('date_to')
+        material = params.get('material')
+        ref_no = params.get('ref_no')
+        md_no = params.get('md_no')
+        inv_no = params.get('inv_no')
+
         if tailor:
             queryset = queryset.filter(Q(tailor__code=tailor) | Q(work_lines__tailor__code=tailor))
-        if month:
-            queryset = queryset.filter(work_lines__date__month=month)
-        if date:
-            queryset = queryset.filter(work_lines__date=date)
-        if tailor or month or date:
+        if date_from:
+            queryset = queryset.filter(work_lines__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(work_lines__date__lte=date_to)
+        if not date_from and not date_to:
+            if date:
+                queryset = queryset.filter(work_lines__date=date)
+            elif month:
+                queryset = queryset.filter(work_lines__date__month=month)
+        if material:
+            queryset = queryset.filter(materials__name__icontains=material)
+        if ref_no:
+            queryset = queryset.filter(ref_no__icontains=ref_no)
+        if md_no:
+            queryset = queryset.filter(md_no__icontains=md_no)
+        if inv_no:
+            queryset = queryset.filter(inv_no__icontains=inv_no)
+
+        if any([tailor, month, date, date_from, date_to, material, ref_no, md_no, inv_no]):
             queryset = queryset.distinct()
         return queryset
 
@@ -452,10 +474,17 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
         work_lines = StitchingWorkLine.objects.filter(reference__in=references)
         month = request.query_params.get('month')
         date = request.query_params.get('date')
-        if date:
-            work_lines = work_lines.filter(date=date)
-        elif month:
-            work_lines = work_lines.filter(date__month=month)
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        if date_from:
+            work_lines = work_lines.filter(date__gte=date_from)
+        if date_to:
+            work_lines = work_lines.filter(date__lte=date_to)
+        if not date_from and not date_to:
+            if date:
+                work_lines = work_lines.filter(date=date)
+            elif month:
+                work_lines = work_lines.filter(date__month=month)
         total_amount = work_lines.aggregate(Sum('rate'))['rate__sum'] or 0
         return Response({
             'total_amount': total_amount,
@@ -489,20 +518,44 @@ class FinishedGoodViewSet(viewsets.ModelViewSet):
     queryset = FinishedGood.objects.select_related('reference', 'reference__tailor').all()
     serializer_class = FinishedGoodSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['reference__ref_no', 'reference__md_no', 'item_name']
+    search_fields = ['reference__ref_no', 'reference__md_no', 'reference__inv_no', 'item_name']
     ordering_fields = ['date', 'created_at']
 
     def get_queryset(self):
         queryset = FinishedGood.objects.select_related('reference', 'reference__tailor').all()
-        tailor = self.request.query_params.get('tailor')
-        month = self.request.query_params.get('month')
-        date = self.request.query_params.get('date')
+        params = self.request.query_params
+        tailor = params.get('tailor')
+        month = params.get('month')
+        date = params.get('date')
+        date_from = params.get('date_from')
+        date_to = params.get('date_to')
+        material = params.get('material')
+        ref_no = params.get('ref_no')
+        md_no = params.get('md_no')
+        inv_no = params.get('inv_no')
+
         if tailor:
             queryset = queryset.filter(reference__tailor__code=tailor)
-        if month:
-            queryset = queryset.filter(date__month=month)
-        if date:
-            queryset = queryset.filter(date=date)
+        if date_from:
+            queryset = queryset.filter(date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(date__lte=date_to)
+        if not date_from and not date_to:
+            if date:
+                queryset = queryset.filter(date=date)
+            elif month:
+                queryset = queryset.filter(date__month=month)
+        if material:
+            queryset = queryset.filter(Q(item_name__icontains=material) | Q(reference__materials__name__icontains=material))
+        if ref_no:
+            queryset = queryset.filter(reference__ref_no__icontains=ref_no)
+        if md_no:
+            queryset = queryset.filter(reference__md_no__icontains=md_no)
+        if inv_no:
+            queryset = queryset.filter(reference__inv_no__icontains=inv_no)
+
+        if material or ref_no or md_no or inv_no:
+            queryset = queryset.distinct()
         return queryset
 
 

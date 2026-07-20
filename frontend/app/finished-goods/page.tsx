@@ -1,19 +1,26 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getFinishedGoods, updateFinishedGood, deleteFinishedGood, getTailors, FinishedGood, Tailor } from '@/lib/api'
+import { getFinishedGoods, updateFinishedGood, deleteFinishedGood, getTailors, getItems, FinishedGood, Tailor, Item } from '@/lib/api'
 
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const firstOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10) }
+const lastOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10) }
 
 type EditForm = { item_name: string; qty: string; cost_price: string; selling_price: string; date: string; remarks: string }
 
 export default function FinishedGoodsPage() {
   const [records, setRecords] = useState<FinishedGood[]>([])
   const [tailors, setTailors] = useState<Tailor[]>([])
+  const [productionItems, setProductionItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1)
+  const [filterDateFrom, setFilterDateFrom] = useState(firstOfMonth())
+  const [filterDateTo, setFilterDateTo] = useState(lastOfMonth())
   const [filterTailor, setFilterTailor] = useState('')
+  const [filterMaterial, setFilterMaterial] = useState('')
+  const [filterRefNo, setFilterRefNo] = useState('')
+  const [filterMdNo, setFilterMdNo] = useState('')
+  const [filterInvNo, setFilterInvNo] = useState('')
 
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({ item_name: '', qty: '', cost_price: '', selling_price: '', date: '', remarks: '' })
@@ -25,15 +32,33 @@ export default function FinishedGoodsPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const params: Record<string, string | number> = { month: filterMonth }
+      const params: Record<string, string> = {}
+      if (filterDateFrom) params.date_from = filterDateFrom
+      if (filterDateTo) params.date_to = filterDateTo
       if (filterTailor) params.tailor = filterTailor
+      if (filterMaterial) params.material = filterMaterial
+      if (filterRefNo) params.ref_no = filterRefNo
+      if (filterMdNo) params.md_no = filterMdNo
+      if (filterInvNo) params.inv_no = filterInvNo
       const res = await getFinishedGoods(params)
       setRecords(res.data)
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchData() }, [filterMonth, filterTailor])
-  useEffect(() => { getTailors({ page_size: 1000 }).then(r => setTailors(r.data.results)) }, [])
+  useEffect(() => {
+    const t = setTimeout(() => { fetchData() }, 300)
+    return () => clearTimeout(t)
+  }, [filterDateFrom, filterDateTo, filterTailor, filterMaterial, filterRefNo, filterMdNo, filterInvNo])
+  useEffect(() => {
+    getTailors({ page_size: 1000 }).then(r => setTailors(r.data.results))
+    getItems({ item_type: 'production' }).then(r => setProductionItems(r.data))
+  }, [])
+
+  const clearFilters = () => {
+    setFilterDateFrom(firstOfMonth()); setFilterDateTo(lastOfMonth()); setFilterTailor('')
+    setFilterMaterial(''); setFilterRefNo(''); setFilterMdNo(''); setFilterInvNo('')
+  }
+  const itemNames = Array.from(new Set(productionItems.map(it => it.name))).sort()
 
   const startEdit = (g: FinishedGood) => {
     setEditingId(g.id)
@@ -100,15 +125,28 @@ export default function FinishedGoodsPage() {
 
         {/* Filters + Table */}
         <div className="card" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Finished Goods</span>
-            <select className="field" style={{ width: 'auto' }} value={filterMonth} onChange={e => setFilterMonth(parseInt(e.target.value))}>
-              {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-            </select>
-            <select className="field" style={{ width: 'auto' }} value={filterTailor} onChange={e => setFilterTailor(e.target.value)}>
-              <option value="">All Tailors</option>
-              {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
-            </select>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Finished Goods</span>
+              <button onClick={clearFilters} type="button" className="btn-ghost" style={{ fontSize: 12 }}>Clear Filters</button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <input type="date" className="field" style={{ width: 'auto' }} value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} title="Date From" />
+              <span style={{ fontSize: 12, color: '#9ca3af' }}>to</span>
+              <input type="date" className="field" style={{ width: 'auto' }} value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} title="Date To" />
+              <select className="field" style={{ width: 'auto' }} value={filterTailor} onChange={e => setFilterTailor(e.target.value)}>
+                <option value="">All Tailors</option>
+                {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
+              </select>
+              <input className="field" style={{ width: 140 }} list="fg-item-names" value={filterMaterial}
+                onChange={e => setFilterMaterial(e.target.value)} placeholder="Item / Material…" />
+              <datalist id="fg-item-names">
+                {itemNames.map(n => <option key={n} value={n} />)}
+              </datalist>
+              <input className="field" style={{ width: 120 }} value={filterRefNo} onChange={e => setFilterRefNo(e.target.value)} placeholder="Ref No…" />
+              <input className="field" style={{ width: 120 }} value={filterMdNo} onChange={e => setFilterMdNo(e.target.value)} placeholder="Model No…" />
+              <input className="field" style={{ width: 120 }} value={filterInvNo} onChange={e => setFilterInvNo(e.target.value)} placeholder="Invoice No…" />
+            </div>
           </div>
 
           {loading ? (

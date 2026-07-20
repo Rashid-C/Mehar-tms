@@ -10,8 +10,9 @@ import {
 } from '@/lib/api'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const firstOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10) }
+const lastOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10) }
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DEFAULT_WORK_TYPES = ['Stitching', 'Cutting', 'Finishing', 'Packing', 'Ironing', 'Embroidery']
 
 type MaterialRow = { name: string; qty: string; price: string }
@@ -54,9 +55,13 @@ export default function StitchingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1)
+  const [filterDateFrom, setFilterDateFrom] = useState(firstOfMonth())
+  const [filterDateTo, setFilterDateTo] = useState(lastOfMonth())
   const [filterTailor, setFilterTailor] = useState('')
-  const [searchItem, setSearchItem] = useState('')
+  const [filterMaterial, setFilterMaterial] = useState('')
+  const [filterInvNo, setFilterInvNo] = useState('')
+  const [filterMdNo, setFilterMdNo] = useState('')
+  const [filterRefNo, setFilterRefNo] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   // ── Entry form (left pane, always visible) ────────────────────────────
@@ -89,19 +94,33 @@ export default function StitchingPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const params: Record<string, string | number> = { month: filterMonth }
+      const params: Record<string, string> = {}
+      if (filterDateFrom) params.date_from = filterDateFrom
+      if (filterDateTo) params.date_to = filterDateTo
       if (filterTailor) params.tailor = filterTailor
+      if (filterMaterial) params.material = filterMaterial
+      if (filterInvNo) params.inv_no = filterInvNo
+      if (filterMdNo) params.md_no = filterMdNo
+      if (filterRefNo) params.ref_no = filterRefNo
       const [recRes, sumRes] = await Promise.all([getStitchingReferences(params), getStitchingSummary(params)])
       setRecords(recRes.data)
       setSummary(sumRes.data)
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchData() }, [filterMonth, filterTailor])
+  useEffect(() => {
+    const t = setTimeout(() => { fetchData() }, 300)
+    return () => clearTimeout(t)
+  }, [filterDateFrom, filterDateTo, filterTailor, filterMaterial, filterInvNo, filterMdNo, filterRefNo])
   useEffect(() => {
     getTailors({ page_size: 1000 }).then(r => setTailors(r.data.results))
     getItems({ item_type: 'production' }).then(r => setProductionItems(r.data))
   }, [])
+
+  const clearFilters = () => {
+    setFilterDateFrom(firstOfMonth()); setFilterDateTo(lastOfMonth()); setFilterTailor('')
+    setFilterMaterial(''); setFilterInvNo(''); setFilterMdNo(''); setFilterRefNo('')
+  }
 
   // ── Entry form helpers ──────────────────────────────────────────────────
   const resetForm = () => {
@@ -240,9 +259,8 @@ export default function StitchingPage() {
 
   // ── Register (right pane) search + totals ───────────────────────────────
   const itemNames = Array.from(new Set(productionItems.map(it => it.name))).sort()
-  const filteredRecords = records.filter(r => !searchItem || r.materials.some(m => m.name === searchItem))
-  const totalQty = filteredRecords.reduce((s, r) => s + r.materials.reduce((s2, m) => s2 + Number(m.qty), 0), 0)
-  const totalAmt = filteredRecords.reduce((s, r) => s + r.materials_total + r.work_total, 0)
+  const totalQty = records.reduce((s, r) => s + r.materials.reduce((s2, m) => s2 + Number(m.qty), 0), 0)
+  const totalAmt = records.reduce((s, r) => s + r.materials_total + r.work_total, 0)
   const handlePrint = () => window.print()
   const workTypeOptions = Array.from(new Set([
     ...DEFAULT_WORK_TYPES,
@@ -390,20 +408,29 @@ export default function StitchingPage() {
 
             {/* Filters + Table */}
             <div className="card" style={{ overflow: 'hidden' }}>
-              <div className="no-print" style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Production Register</span>
-                <select className="field" style={{ width: 'auto' }} value={filterMonth} onChange={e => setFilterMonth(parseInt(e.target.value))}>
-                  {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                </select>
-                <select className="field" style={{ width: 'auto' }} value={filterTailor} onChange={e => setFilterTailor(e.target.value)} title="Search By Party">
-                  <option value="">Search By Party — All</option>
-                  {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
-                </select>
-                <select className="field" style={{ width: 'auto' }} value={searchItem} onChange={e => setSearchItem(e.target.value)} title="Search By Item">
-                  <option value="">Search By Item — All</option>
-                  {itemNames.map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-                <button onClick={handlePrint} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>🖶 Print</button>
+              <div className="no-print" style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Production Register</span>
+                  <button onClick={clearFilters} type="button" className="btn-ghost" style={{ fontSize: 12 }}>Clear Filters</button>
+                  <button onClick={handlePrint} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>🖶 Print</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <input type="date" className="field" style={{ width: 'auto' }} value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} title="Date From" />
+                  <span style={{ fontSize: 12, color: '#9ca3af' }}>to</span>
+                  <input type="date" className="field" style={{ width: 'auto' }} value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} title="Date To" />
+                  <select className="field" style={{ width: 'auto' }} value={filterTailor} onChange={e => setFilterTailor(e.target.value)} title="Search By Tailor">
+                    <option value="">All Tailors</option>
+                    {tailors.map(t => <option key={t.id} value={t.code}>{t.code} — {t.name}</option>)}
+                  </select>
+                  <input className="field" style={{ width: 140 }} list="stitching-item-names" value={filterMaterial}
+                    onChange={e => setFilterMaterial(e.target.value)} placeholder="Material…" />
+                  <datalist id="stitching-item-names">
+                    {itemNames.map(n => <option key={n} value={n} />)}
+                  </datalist>
+                  <input className="field" style={{ width: 120 }} value={filterRefNo} onChange={e => setFilterRefNo(e.target.value)} placeholder="Ref No…" />
+                  <input className="field" style={{ width: 120 }} value={filterMdNo} onChange={e => setFilterMdNo(e.target.value)} placeholder="Model No…" />
+                  <input className="field" style={{ width: 120 }} value={filterInvNo} onChange={e => setFilterInvNo(e.target.value)} placeholder="Invoice No…" />
+                </div>
               </div>
 
               {loading ? (
@@ -428,7 +455,7 @@ export default function StitchingPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredRecords.map(r => (
+                      {records.map(r => (
                         <Fragment key={r.id}>
                           <tr onClick={() => toggleExpand(r)} style={{ cursor: 'pointer', background: expandedId === r.id ? '#f8fafc' : undefined }}>
                             <td style={{ fontWeight: 700, color: '#7c3aed', fontFamily: 'monospace' }}>
@@ -573,12 +600,12 @@ export default function StitchingPage() {
                   </table>
                 </div>
               )}
-              {!loading && filteredRecords.length === 0 && (
+              {!loading && records.length === 0 && (
                 <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>
-                  {records.length === 0 ? 'No stitching references yet. Use the form on the left to create one.' : 'No references match the current search.'}
+                  No references match the current search.
                 </p>
               )}
-              {!loading && filteredRecords.length > 0 && (
+              {!loading && records.length > 0 && (
                 <div style={{ padding: '12px 16px', borderTop: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', justifyContent: 'flex-end', gap: 24 }}>
                   <span style={{ fontSize: 13, color: '#374151' }}>Total Qty: <strong>{totalQty.toFixed(2)}</strong></span>
                   <span style={{ fontSize: 13, color: '#374151' }}>Total Amt: <strong>AED {totalAmt.toFixed(2)}</strong></span>
