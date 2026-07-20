@@ -127,13 +127,16 @@ export default function StitchingPage() {
 
   const handleCreate = async () => {
     setCreateError('')
-    if (!allocationTailor) { setCreateError('Please select the Allocation Cut tailor'); return }
     const validWork = workLines.filter(w => w.tailor && w.rate && w.date)
-    if (validWork.length === 0) { setCreateError('Add at least one stitching work line (Tailor, Rate, Date)'); return }
+    if (!allocationTailor && validWork.length === 0) {
+      setCreateError('Select an Allocation Cut tailor or add at least one stitching work line (Tailor, Rate, Date)')
+      return
+    }
+    const referenceTailor = allocationTailor || validWork[0].tailor
     setSaving(true)
     try {
       await createStitchingReference({
-        ref_no: refNo, md_no: mdNo, inv_no: invNo, tailor: parseInt(allocationTailor), remarks,
+        ref_no: refNo, md_no: mdNo, inv_no: invNo, tailor: parseInt(referenceTailor), remarks,
         materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0 })),
         work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date })),
       })
@@ -286,7 +289,7 @@ export default function StitchingPage() {
                 <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
               </div>
               <div style={{ marginBottom: 16 }}>
-                <label style={lbl}>Allocation Cut (Tailor / Party) *</label>
+                <label style={lbl}>Allocation Cut (Tailor / Party) — required if no stitching work is added</label>
                 <select className="field" value={allocationTailor} onChange={e => setAllocationTailor(e.target.value)}>
                   <option value="">Select tailor</option>
                   {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
