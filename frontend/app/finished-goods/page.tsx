@@ -1,11 +1,48 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getFinishedGoods, updateFinishedGood, deleteFinishedGood, getTailors, getItems, FinishedGood, Tailor, Item } from '@/lib/api'
+import {
+  getFinishedGoods, updateFinishedGood, deleteFinishedGood, getTailors, getItems,
+  createStitchingReference, getNextStitchingRefNo, finishStitchingReference,
+  FinishedGood, Tailor, Item,
+} from '@/lib/api'
 
+const today = () => new Date().toISOString().slice(0, 10)
 const firstOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10) }
 const lastOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10) }
+const DEFAULT_WORK_TYPES = ['Stitching', 'Cutting', 'Finishing', 'Packing', 'Ironing', 'Embroidery']
+const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 
 type EditForm = { item_name: string; qty: string; cost_price: string; selling_price: string; date: string; remarks: string }
+type MaterialRow = { name: string; qty: string; price: string }
+type WorkRow = { tailor: string; work_type: string; rate: string; date: string }
+
+function MaterialNameInput({ value, items, onChange, onPick, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; onPick?: (item: Item) => void; excludeNames?: string[] }) {
+  const [showList, setShowList] = useState(false)
+  const excluded = new Set(excludeNames.filter(Boolean).map(n => n.toLowerCase()))
+  const matches = items.filter(it => (!value || it.name.toLowerCase().includes(value.toLowerCase())) && !excluded.has(it.name.toLowerCase()))
+  return (
+    <div style={{ position: 'relative' }}>
+      <input className="field" value={value} onChange={e => onChange(e.target.value)}
+        onFocus={() => setShowList(true)}
+        onBlur={() => setTimeout(() => setShowList(false), 150)}
+        placeholder="e.g. Shawl, Nida…" autoComplete="off" />
+      {showList && matches.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.08)', maxHeight: 180, overflowY: 'auto', zIndex: 20 }}>
+          {matches.map(it => (
+            <button key={it.id} type="button"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { onChange(it.name); onPick?.(it); setShowList(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, color: '#374151', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+              {it.name} {it.code && <span style={{ color: '#94a3b8', fontSize: 10 }}>({it.code})</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function FinishedGoodsPage() {
   const [records, setRecords] = useState<FinishedGood[]>([])
@@ -25,6 +62,17 @@ export default function FinishedGoodsPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({ item_name: '', qty: '', cost_price: '', selling_price: '', date: '', remarks: '' })
   const [saving, setSaving] = useState(false)
+
+  // ── Manufacture modal (create + finish a new reference directly here) ──
+  const [manufactureOpen, setManufactureOpen] = useState(false)
+  const [manuRefNo, setManuRefNo] = useState('')
+  const [manuMdNo, setManuMdNo] = useState('')
+  const [manuTailor, setManuTailor] = useState('')
+  const [manuRemarks, setManuRemarks] = useState('')
+  const [manuMaterials, setManuMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '' }])
+  const [manuWorkLines, setManuWorkLines] = useState<WorkRow[]>([{ tailor: '', work_type: 'Stitching', rate: '', date: today() }])
+  const [manuSaving, setManuSaving] = useState(false)
+  const [manuError, setManuError] = useState('')
 
   const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3000) }
   const fail = (msg: string) => { setError(msg); setSuccess('') }
@@ -92,6 +140,49 @@ export default function FinishedGoodsPage() {
     catch { fail('Failed to delete') }
   }
 
+  const openManufacture = () => {
+    setManuError('')
+    setManuMdNo(''); setManuTailor(''); setManuRemarks('')
+    setManuMaterials([{ name: '', qty: '', price: '' }])
+    setManuWorkLines([{ tailor: '', work_type: 'Stitching', rate: '', date: today() }])
+    getNextStitchingRefNo().then(r => setManuRefNo(r.data.next_ref_no))
+    setManufactureOpen(true)
+  }
+  const closeManufacture = () => setManufactureOpen(false)
+
+  const updateManuMaterial = (i: number, patch: Partial<MaterialRow>) => setManuMaterials(prev => prev.map((m, idx) => idx === i ? { ...m, ...patch } : m))
+  const addManuMaterial = () => setManuMaterials(prev => [...prev, { name: '', qty: '', price: '' }])
+  const removeManuMaterial = (i: number) => setManuMaterials(prev => prev.filter((_, idx) => idx !== i))
+
+  const updateManuWork = (i: number, patch: Partial<WorkRow>) => setManuWorkLines(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w))
+  const addManuWork = () => setManuWorkLines(prev => [...prev, { tailor: '', work_type: 'Stitching', rate: '', date: today() }])
+  const removeManuWork = (i: number) => setManuWorkLines(prev => prev.filter((_, idx) => idx !== i))
+
+  const handleManufacture = async () => {
+    setManuError('')
+    const validWork = manuWorkLines.filter(w => w.tailor && w.rate && w.date)
+    if (!manuTailor && validWork.length === 0) {
+      setManuError('Select an Allocation Cut tailor or add at least one stitching work line (Tailor, Rate, Date)')
+      return
+    }
+    const referenceTailor = manuTailor || validWork[0].tailor
+    setManuSaving(true)
+    try {
+      const created = await createStitchingReference({
+        ref_no: manuRefNo, md_no: manuMdNo, inv_no: '', tailor: parseInt(referenceTailor), remarks: manuRemarks,
+        materials: manuMaterials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0 })),
+        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date })),
+      })
+      await finishStitchingReference(created.data.id)
+      notify(`Reference ${manuRefNo} manufactured`)
+      setManufactureOpen(false)
+      await fetchData()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: unknown } }
+      setManuError(e.response?.data ? JSON.stringify(e.response.data) : 'Failed to save')
+    } finally { setManuSaving(false) }
+  }
+
   const totalQty = records.reduce((s, g) => s + Number(g.qty), 0)
   const totalCost = records.reduce((s, g) => s + Number(g.cost_price) * Number(g.qty), 0)
   const totalSelling = records.reduce((s, g) => s + Number(g.selling_price) * Number(g.qty), 0)
@@ -100,10 +191,13 @@ export default function FinishedGoodsPage() {
     <main style={{ padding: '24px', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1300, margin: '0 auto' }}>
 
-        <div style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Finished Goods</p>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Finished Goods</h1>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Stitching references that have been marked as finished and moved out of production</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between" style={{ marginBottom: 20, gap: 12 }}>
+          <div>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Finished Goods</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Finished Goods</h1>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Stitching references that have been marked as finished and moved out of production</p>
+          </div>
+          <button onClick={openManufacture} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>+ Manufacture</button>
         </div>
 
         {success && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{success}</div>}
@@ -216,12 +310,103 @@ export default function FinishedGoodsPage() {
           )}
           {!loading && records.length === 0 && (
             <p style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: 13 }}>
-              No finished goods yet. Click Finish on a reference in the Stitching Register to move it here.
+              No finished goods yet. Click Finish on a reference in the Stitching Register, or + Manufacture to add one directly here.
             </p>
           )}
         </div>
 
       </div>
+
+      {/* Manufacture modal — create a new reference and finish it directly from here */}
+      {manufactureOpen && (
+        <div onClick={closeManufacture}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} className="card" style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Manufacture</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
+                {manuRefNo || '…'}
+              </span>
+            </div>
+            <div style={{ padding: 20 }}>
+              {manuError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{manuError}</div>}
+
+              <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 16 }}>
+                <div>
+                  <label style={lbl}>Model Number</label>
+                  <input className="field" value={manuMdNo} onChange={e => setManuMdNo(e.target.value)} placeholder="Editable model no…" />
+                </div>
+                <div>
+                  <label style={lbl}>Allocation Cut (Tailor / Party)</label>
+                  <select className="field" value={manuTailor} onChange={e => setManuTailor(e.target.value)}>
+                    <option value="">Select tailor</option>
+                    {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Materials */}
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {manuMaterials.map((m, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                    <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateManuMaterial(i, { name: v })}
+                      onPick={it => updateManuMaterial(i, { price: String(it.purchase_price ?? '') })}
+                      excludeNames={manuMaterials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
+                    <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateManuMaterial(i, { qty: e.target.value })} placeholder="Qty" />
+                    <input type="number" min="0" step="0.01" className="field" value={m.price} onChange={e => updateManuMaterial(i, { price: e.target.value })} placeholder="Price" />
+                    <button type="button" onClick={() => removeManuMaterial(i)} disabled={manuMaterials.length === 1}
+                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuMaterials.length === 1 ? 0.3 : 1 }}>×</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addManuMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                  + Add Material {manuMaterials.length + 1}
+                </button>
+              </div>
+
+              {/* Work Type */}
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {manuWorkLines.map((w, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.3fr 1.2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                    <select className="field" value={w.tailor} onChange={e => updateManuWork(i, { tailor: e.target.value })}>
+                      <option value="">Tailor</option>
+                      {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                    </select>
+                    <input className="field" list="fg-work-type-options" value={w.work_type} onChange={e => updateManuWork(i, { work_type: e.target.value })} placeholder="Stitching, Cutting…" />
+                    <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateManuWork(i, { rate: e.target.value })} placeholder="Rate" />
+                    <input type="date" className="field" value={w.date} onChange={e => updateManuWork(i, { date: e.target.value })} />
+                    <button type="button" onClick={() => removeManuWork(i)} disabled={manuWorkLines.length === 1}
+                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuWorkLines.length === 1 ? 0.3 : 1 }}>×</button>
+                  </div>
+                ))}
+                <datalist id="fg-work-type-options">
+                  {DEFAULT_WORK_TYPES.map(t => <option key={t} value={t} />)}
+                </datalist>
+                <button type="button" onClick={addManuWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                  + Add Work {manuWorkLines.length + 1}
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={lbl}>Remarks</label>
+                <input className="field" value={manuRemarks} onChange={e => setManuRemarks(e.target.value)} placeholder="Optional notes…" />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button onClick={closeManufacture} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>Cancel</button>
+                <button onClick={handleManufacture} disabled={manuSaving} className="btn-gold" style={{ background: '#16a34a' }}>
+                  {manuSaving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
