@@ -272,7 +272,7 @@ export default function StitchingPage() {
           {/* ── Left pane: Stitching Entry form (always visible) ──────────── */}
           <div className="no-print card" style={{ overflow: 'hidden', alignSelf: 'start' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>Stitching Entry</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>Production Entry</span>
               <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
                 {refNo || '…'}
               </span>
@@ -391,7 +391,7 @@ export default function StitchingPage() {
             {/* Filters + Table */}
             <div className="card" style={{ overflow: 'hidden' }}>
               <div className="no-print" style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Stitching Register</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginRight: 'auto' }}>Production Register</span>
                 <select className="field" style={{ width: 'auto' }} value={filterMonth} onChange={e => setFilterMonth(parseInt(e.target.value))}>
                   {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                 </select>
