@@ -90,6 +90,8 @@ export default function StitchingPage() {
   const [editWorkId, setEditWorkId] = useState<number | null>(null)
   const [savingMat, setSavingMat] = useState(false)
   const [savingWork, setSavingWork] = useState(false)
+  const [matSearch, setMatSearch] = useState('')
+  const [workSearch, setWorkSearch] = useState('')
 
   const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3000) }
   const fail = (msg: string) => { setError(msg); setSuccess('') }
@@ -177,6 +179,7 @@ export default function StitchingPage() {
     setExpandedId(r.id)
     setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setMatRemarks(''); setEditMatId(null)
     setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setWorkRemarks(''); setEditWorkId(null)
+    setMatSearch(''); setWorkSearch('')
   }
 
   const handleDeleteRef = async (id: number, e: React.MouseEvent) => {
@@ -268,6 +271,18 @@ export default function StitchingPage() {
     ...DEFAULT_WORK_TYPES,
     ...records.flatMap(r => r.work_lines.map(w => w.work_type)),
   ].filter(Boolean))).sort()
+
+  const getFilteredMaterials = (r: StitchingReference) => r.materials.filter(m =>
+    !matSearch ||
+    m.name.toLowerCase().includes(matSearch.toLowerCase()) ||
+    (m.remarks || '').toLowerCase().includes(matSearch.toLowerCase())
+  )
+  const getFilteredWorkLines = (r: StitchingReference) => r.work_lines.filter(w =>
+    !workSearch ||
+    w.tailor_code.toLowerCase().includes(workSearch.toLowerCase()) ||
+    (w.work_type || '').toLowerCase().includes(workSearch.toLowerCase()) ||
+    (w.remarks || '').toLowerCase().includes(workSearch.toLowerCase())
+  )
 
   return (
     <main style={{ padding: '24px', minHeight: '100vh' }}>
@@ -530,6 +545,13 @@ export default function StitchingPage() {
                                     {r.materials.length === 0 ? (
                                       <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No materials yet.</p>
                                     ) : (
+                                      <>
+                                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #e8ecf0' }}>
+                                          <input className="field" value={matSearch} onChange={e => setMatSearch(e.target.value)} placeholder="Search materials…" />
+                                        </div>
+                                        {getFilteredMaterials(r).length === 0 ? (
+                                          <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No matches.</p>
+                                        ) : (
                                       <table className="z-table">
                                         <thead>
                                           <tr>
@@ -541,7 +563,7 @@ export default function StitchingPage() {
                                           </tr>
                                         </thead>
                                         <tbody>
-                                          {r.materials.map(m => (
+                                          {getFilteredMaterials(r).map(m => (
                                             <tr key={m.id} style={{ background: editMatId === m.id ? '#f5f3ff' : undefined }}>
                                               <td style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</td>
                                               <td style={{ fontSize: 12 }}>{m.qty}</td>
@@ -565,6 +587,8 @@ export default function StitchingPage() {
                                           </tr>
                                         </tfoot>
                                       </table>
+                                    )}
+                                      </>
                                     )}
                                   </div>
 
@@ -594,6 +618,13 @@ export default function StitchingPage() {
                                     {r.work_lines.length === 0 ? (
                                       <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No work lines yet.</p>
                                     ) : (
+                                      <>
+                                        <div style={{ padding: '8px 12px', borderBottom: '1px solid #e8ecf0' }}>
+                                          <input className="field" value={workSearch} onChange={e => setWorkSearch(e.target.value)} placeholder="Search work lines…" />
+                                        </div>
+                                        {getFilteredWorkLines(r).length === 0 ? (
+                                          <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No matches.</p>
+                                        ) : (
                                       <table className="z-table">
                                         <thead>
                                           <tr>
@@ -606,7 +637,7 @@ export default function StitchingPage() {
                                           </tr>
                                         </thead>
                                         <tbody>
-                                          {r.work_lines.map(w => (
+                                          {getFilteredWorkLines(r).map(w => (
                                             <tr key={w.id} style={{ background: editWorkId === w.id ? '#f0fdf4' : undefined }}>
                                               <td style={{ fontSize: 12, color: '#6b7280' }}>{w.date}</td>
                                               <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{w.tailor_code}</span></td>
@@ -630,6 +661,8 @@ export default function StitchingPage() {
                                           </tr>
                                         </tfoot>
                                       </table>
+                                    )}
+                                      </>
                                     )}
                                   </div>
 
