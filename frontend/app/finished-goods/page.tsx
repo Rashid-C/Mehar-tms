@@ -200,11 +200,136 @@ export default function FinishedGoodsPage() {
             <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Finished Goods</h1>
             <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Stitching references that have been marked as finished and moved out of production</p>
           </div>
-          <button onClick={openManufacture} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>+ Manufacture</button>
+          <div className="flex flex-col sm:flex-row" style={{ gap: 8 }}>
+            <button className="btn-gold w-full sm:w-auto" style={{ background: '#0ea5e9' }}>BULK MANUFACTURE</button>
+            <button onClick={manufactureOpen ? closeManufacture : openManufacture} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>
+              {manufactureOpen ? '× Cancel' : '+ Manufacture'}
+            </button>
+          </div>
         </div>
 
         {success && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{success}</div>}
         {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{error}</div>}
+
+        <div className={manufactureOpen ? 'grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5' : 'grid grid-cols-1 gap-5'}>
+
+          {/* ── Left pane: Production Entry form (opens on demand) ─────────── */}
+          {manufactureOpen && (
+          <div className="card" style={{ overflow: 'hidden', alignSelf: 'start' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>Production Entry</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
+                {manuRefNo || '…'}
+              </span>
+            </div>
+            <div style={{ padding: 16 }}>
+              {manuError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{manuError}</div>}
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={lbl}>Model Number</label>
+                <input className="field" value={manuMdNo} onChange={e => setManuMdNo(e.target.value)} placeholder="Editable model no…" />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION (Tailor / Party) — required if no stitching work is added</label>
+                <select className="field" value={manuTailor} onChange={e => setManuTailor(e.target.value)}>
+                  <option value="">Select tailor</option>
+                  {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 16 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>Total (Materials + Work)</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>AED {(manuMaterialsTotal + manuWorkTotal).toFixed(2)}</span>
+              </div>
+
+              {/* Materials */}
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{manuMaterialsTotal.toFixed(2)}</strong></span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                {manuMaterials.map((m, i) => (
+                  <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Material {i + 1}</span>
+                      <button type="button" onClick={() => removeManuMaterial(i)} disabled={manuMaterials.length === 1}
+                        className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: manuMaterials.length === 1 ? 0.3 : 1 }}>×</button>
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
+                      <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateManuMaterial(i, { name: v, priceIsUnit: false })}
+                        onPick={it => updateManuMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
+                        excludeNames={manuMaterials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                      <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateManuMaterial(i, { qty: e.target.value })} placeholder="Qty" />
+                      <input type="number" min="0" step="0.01" className="field"
+                        value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
+                        onChange={e => updateManuMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
+                        style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
+                    </div>
+                    <input className="field" value={m.remarks} onChange={e => updateManuMaterial(i, { remarks: e.target.value })} placeholder="Remarks…" />
+                  </div>
+                ))}
+                <button type="button" onClick={addManuMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                  + Add Material {manuMaterials.length + 1}
+                </button>
+              </div>
+
+              {/* Work Type */}
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {manuWorkTotal.toFixed(2)}</strong></span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                {manuWorkLines.map((w, i) => (
+                  <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Work {i + 1}</span>
+                      <button type="button" onClick={() => removeManuWork(i)} disabled={manuWorkLines.length === 1}
+                        className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: manuWorkLines.length === 1 ? 0.3 : 1 }}>×</button>
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
+                      <select className="field" value={w.tailor} onChange={e => updateManuWork(i, { tailor: e.target.value })}>
+                        <option value="">Select tailor</option>
+                        {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: 6 }}>
+                      <input className="field" list="fg-work-type-options" value={w.work_type} onChange={e => updateManuWork(i, { work_type: e.target.value })}
+                        placeholder="Work type — e.g. Stitching, Cutting…" />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                      <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateManuWork(i, { rate: e.target.value })} placeholder="Rate" />
+                      <input type="date" className="field" value={w.date} onChange={e => updateManuWork(i, { date: e.target.value })} />
+                    </div>
+                    <input className="field" value={w.remarks} onChange={e => updateManuWork(i, { remarks: e.target.value })} placeholder="Remarks…" />
+                  </div>
+                ))}
+                <datalist id="fg-work-type-options">
+                  {DEFAULT_WORK_TYPES.map(t => <option key={t} value={t} />)}
+                </datalist>
+                <button type="button" onClick={addManuWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                  + Add Work {manuWorkLines.length + 1}
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={lbl}>Remarks / Notes</label>
+                <input className="field" value={manuRemarks} onChange={e => setManuRemarks(e.target.value)} placeholder="Optional notes…" />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button onClick={openManufacture} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>Clear</button>
+                <button onClick={handleManufacture} disabled={manuSaving} className="btn-gold" style={{ background: '#16a34a' }}>
+                  {manuSaving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* ── Right pane: Finished Goods Register ─────────────────────────── */}
+          <div>
 
         {/* Summary Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 16 }}>
@@ -318,114 +443,11 @@ export default function FinishedGoodsPage() {
           )}
         </div>
 
-      </div>
-
-      {/* Manufacture modal — create a new reference and finish it directly from here */}
-      {manufactureOpen && (
-        <div onClick={closeManufacture}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} className="card" style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Manufacture</span>
-              <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
-                {manuRefNo || '…'}
-              </span>
-            </div>
-            <div style={{ padding: 20 }}>
-              {manuError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{manuError}</div>}
-
-              <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 16 }}>
-                <div>
-                  <label style={lbl}>Model Number</label>
-                  <input className="field" value={manuMdNo} onChange={e => setManuMdNo(e.target.value)} placeholder="Editable model no…" />
-                </div>
-                <div>
-                  <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION (Tailor / Party)</label>
-                  <select className="field" value={manuTailor} onChange={e => setManuTailor(e.target.value)}>
-                    <option value="">Select tailor</option>
-                    {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 16 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>Total (Materials + Work)</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>AED {(manuMaterialsTotal + manuWorkTotal).toFixed(2)}</span>
-              </div>
-
-              {/* Materials */}
-              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{manuMaterialsTotal.toFixed(2)}</strong></span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                {manuMaterials.map((m, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                      <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateManuMaterial(i, { name: v, priceIsUnit: false })}
-                        onPick={it => updateManuMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
-                        excludeNames={manuMaterials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
-                      <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateManuMaterial(i, { qty: e.target.value })} placeholder="Qty" />
-                      <input type="number" min="0" step="0.01" className="field"
-                        value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
-                        onChange={e => updateManuMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
-                        style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
-                      <button type="button" onClick={() => removeManuMaterial(i)} disabled={manuMaterials.length === 1}
-                        className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuMaterials.length === 1 ? 0.3 : 1 }}>×</button>
-                    </div>
-                    <input className="field" value={m.remarks} onChange={e => updateManuMaterial(i, { remarks: e.target.value })} placeholder="Remarks…" />
-                  </div>
-                ))}
-                <button type="button" onClick={addManuMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                  + Add Material {manuMaterials.length + 1}
-                </button>
-              </div>
-
-              {/* Work Type */}
-              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {manuWorkTotal.toFixed(2)}</strong></span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                {manuWorkLines.map((w, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1.2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                      <select className="field" value={w.tailor} onChange={e => updateManuWork(i, { tailor: e.target.value })}>
-                        <option value="">Tailor</option>
-                        {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
-                      </select>
-                      <input className="field" list="fg-work-type-options" value={w.work_type} onChange={e => updateManuWork(i, { work_type: e.target.value })} placeholder="Stitching, Cutting…" />
-                      <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateManuWork(i, { rate: e.target.value })} placeholder="Rate" />
-                      <input type="date" className="field" value={w.date} onChange={e => updateManuWork(i, { date: e.target.value })} />
-                      <button type="button" onClick={() => removeManuWork(i)} disabled={manuWorkLines.length === 1}
-                        className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuWorkLines.length === 1 ? 0.3 : 1 }}>×</button>
-                    </div>
-                    <input className="field" value={w.remarks} onChange={e => updateManuWork(i, { remarks: e.target.value })} placeholder="Remarks…" />
-                  </div>
-                ))}
-                <datalist id="fg-work-type-options">
-                  {DEFAULT_WORK_TYPES.map(t => <option key={t} value={t} />)}
-                </datalist>
-                <button type="button" onClick={addManuWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                  + Add Work {manuWorkLines.length + 1}
-                </button>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label style={lbl}>Remarks</label>
-                <input className="field" value={manuRemarks} onChange={e => setManuRemarks(e.target.value)} placeholder="Optional notes…" />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <button onClick={closeManufacture} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>Cancel</button>
-                <button onClick={handleManufacture} disabled={manuSaving} className="btn-gold" style={{ background: '#16a34a' }}>
-                  {manuSaving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-            </div>
           </div>
+
         </div>
-      )}
+
+      </div>
     </main>
   )
 }

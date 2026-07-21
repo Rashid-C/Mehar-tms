@@ -64,7 +64,8 @@ export default function StitchingPage() {
   const [filterRefNo, setFilterRefNo] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
-  // ── Entry form (left pane, always visible) ────────────────────────────
+  // ── Entry form (opens on demand) ────────────────────────────────────────
+  const [showCreate, setShowCreate] = useState(false)
   const [refNo, setRefNo] = useState('')
   const [mdNo, setMdNo] = useState('')
   const [invNo, setInvNo] = useState('')
@@ -136,7 +137,8 @@ export default function StitchingPage() {
     getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
   }
 
-  useEffect(() => { getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no)) }, [])
+  const openCreate = () => { resetForm(); setShowCreate(true) }
+  const closeCreate = () => setShowCreate(false)
 
   const materialsTotal = materials.reduce((s, m) => s + (parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0), 0)
   const workTotal = workLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
@@ -165,7 +167,7 @@ export default function StitchingPage() {
         work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date, remarks: w.remarks })),
       })
       notify(`Reference ${refNo} created`)
-      resetForm()
+      setShowCreate(false)
       await fetchData()
     } catch (err: unknown) {
       const e = err as { response?: { data?: unknown } }
@@ -303,18 +305,24 @@ export default function StitchingPage() {
       <div style={{ maxWidth: 1500, margin: '0 auto' }}>
 
         {/* Header */}
-        <div className="no-print" style={{ marginBottom: 20 }}>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Stitching</p>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Shop Stitching</h1>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Each reference groups a material allocation with one or more tailors&apos; stitching work</p>
+        <div className="no-print flex flex-col sm:flex-row sm:items-center sm:justify-between" style={{ marginBottom: 20, gap: 12 }}>
+          <div>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>Home · Stitching</p>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1e293b', margin: 0 }}>Shop Stitching</h1>
+            <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Each reference groups a material allocation with one or more tailors&apos; stitching work</p>
+          </div>
+          <button onClick={showCreate ? closeCreate : openCreate} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>
+            {showCreate ? '× Cancel' : '+ Production Entry'}
+          </button>
         </div>
 
         {success && <div className="no-print" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{success}</div>}
         {error && <div className="no-print" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{error}</div>}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5">
+        <div className={showCreate ? 'grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5' : 'grid grid-cols-1 gap-5'}>
 
-          {/* ── Left pane: Stitching Entry form (always visible) ──────────── */}
+          {/* ── Left pane: Production Entry form (opens on demand) ─────────── */}
+          {showCreate && (
           <div className="no-print card" style={{ overflow: 'hidden', alignSelf: 'start' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>Production Entry</span>
@@ -427,6 +435,7 @@ export default function StitchingPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* ── Right pane: Stitching Register ─────────────────────────────── */}
           <div>
