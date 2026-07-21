@@ -286,7 +286,17 @@ export default function StitchingPage() {
 
   return (
     <main style={{ padding: '24px', minHeight: '100vh' }}>
-      <style>{`@media print { .no-print { display: none !important; } }`}</style>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          @page { size: landscape; margin: 10mm; }
+          body { background: #ffffff; }
+          main { padding: 0 !important; }
+          .card { border: none !important; box-shadow: none !important; }
+          .z-table { min-width: 0 !important; width: 100% !important; }
+          .print-table-wrap { overflow: visible !important; }
+        }
+      `}</style>
       <datalist id="work-type-options">
         {workTypeOptions.map(t => <option key={t} value={t} />)}
       </datalist>
@@ -465,7 +475,7 @@ export default function StitchingPage() {
                   <span className="spinner" /><span style={{ fontSize: 13 }}>Loading…</span>
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
+                <div className="print-table-wrap" style={{ overflowX: 'auto' }}>
                   <table className="z-table" style={{ minWidth: 900 }}>
                     <thead>
                       <tr>

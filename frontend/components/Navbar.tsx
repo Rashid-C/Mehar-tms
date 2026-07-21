@@ -32,7 +32,7 @@ export default function Navbar() {
   return (
     <>
       {/* ── BAR 1 — dark top strip ─────────────────────────────────────── */}
-      <div style={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, zIndex: 60 }}>
+      <div className="no-print" style={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'sticky', top: 0, zIndex: 60 }}>
         <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 48 }}>
 
           {/* Logo + brand */}
@@ -87,7 +87,7 @@ export default function Navbar() {
       </div>
 
       {/* ── BAR 2 — white sub-nav ───────────────────────────────────────── */}
-      <div style={{ background: '#ffffff', borderBottom: '1px solid #e8ecf0', position: 'sticky', top: 48, zIndex: 50 }}>
+      <div className="no-print" style={{ background: '#ffffff', borderBottom: '1px solid #e8ecf0', position: 'sticky', top: 48, zIndex: 50 }}>
         <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: 38 }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0, marginRight: 16 }}>
             <Image src="/logo.png" alt="Mehar Pardha" width={20} height={20} style={{ objectFit: 'contain' }} />
@@ -120,7 +120,7 @@ export default function Navbar() {
 
       {/* ── Mobile dropdown ──────────────────────────────────────────────── */}
       {open && (
-        <div className="md:hidden" style={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '8px 16px 16px', position: 'sticky', top: 48, zIndex: 45 }}>
+        <div className="md:hidden no-print" style={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '8px 16px 16px', position: 'sticky', top: 48, zIndex: 45 }}>
           {[{ href: '/', label: 'Dashboard' }, ...modules].map(m => (
             <a key={m.href} href={m.href} onClick={() => setOpen(false)}
               style={{ display: 'block', color: active(m.href) ? '#f0d060' : '#94a3b8', fontSize: 14, padding: '10px 12px', textDecoration: 'none', borderRadius: 6, marginBottom: 2, fontWeight: active(m.href) ? 600 : 400 }}>
