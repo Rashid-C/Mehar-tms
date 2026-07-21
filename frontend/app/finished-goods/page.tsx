@@ -13,7 +13,7 @@ const DEFAULT_WORK_TYPES = ['Stitching', 'Cutting', 'Finishing', 'Packing', 'Iro
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 
 type EditForm = { item_name: string; qty: string; cost_price: string; selling_price: string; date: string; remarks: string }
-type MaterialRow = { name: string; qty: string; price: string }
+type MaterialRow = { name: string; qty: string; price: string; priceIsUnit: boolean }
 type WorkRow = { tailor: string; work_type: string; rate: string; date: string }
 
 function MaterialNameInput({ value, items, onChange, onPick, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; onPick?: (item: Item) => void; excludeNames?: string[] }) {
@@ -69,7 +69,7 @@ export default function FinishedGoodsPage() {
   const [manuMdNo, setManuMdNo] = useState('')
   const [manuTailor, setManuTailor] = useState('')
   const [manuRemarks, setManuRemarks] = useState('')
-  const [manuMaterials, setManuMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '' }])
+  const [manuMaterials, setManuMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '', priceIsUnit: false }])
   const [manuWorkLines, setManuWorkLines] = useState<WorkRow[]>([{ tailor: '', work_type: 'Stitching', rate: '', date: today() }])
   const [manuSaving, setManuSaving] = useState(false)
   const [manuError, setManuError] = useState('')
@@ -143,15 +143,18 @@ export default function FinishedGoodsPage() {
   const openManufacture = () => {
     setManuError('')
     setManuMdNo(''); setManuTailor(''); setManuRemarks('')
-    setManuMaterials([{ name: '', qty: '', price: '' }])
+    setManuMaterials([{ name: '', qty: '', price: '', priceIsUnit: false }])
     setManuWorkLines([{ tailor: '', work_type: 'Stitching', rate: '', date: today() }])
     getNextStitchingRefNo().then(r => setManuRefNo(r.data.next_ref_no))
     setManufactureOpen(true)
   }
   const closeManufacture = () => setManufactureOpen(false)
 
+  const manuMaterialsTotal = manuMaterials.reduce((s, m) => s + (parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0), 0)
+  const manuWorkTotal = manuWorkLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
+
   const updateManuMaterial = (i: number, patch: Partial<MaterialRow>) => setManuMaterials(prev => prev.map((m, idx) => idx === i ? { ...m, ...patch } : m))
-  const addManuMaterial = () => setManuMaterials(prev => [...prev, { name: '', qty: '', price: '' }])
+  const addManuMaterial = () => setManuMaterials(prev => [...prev, { name: '', qty: '', price: '', priceIsUnit: false }])
   const removeManuMaterial = (i: number) => setManuMaterials(prev => prev.filter((_, idx) => idx !== i))
 
   const updateManuWork = (i: number, patch: Partial<WorkRow>) => setManuWorkLines(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w))
@@ -345,18 +348,27 @@ export default function FinishedGoodsPage() {
                 </div>
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 16 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>Total (Materials + Work)</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>AED {(manuMaterialsTotal + manuWorkTotal).toFixed(2)}</span>
+              </div>
+
               {/* Materials */}
-              <div style={{ marginBottom: 8 }}>
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{manuMaterialsTotal.toFixed(2)}</strong></span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {manuMaterials.map((m, i) => (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                    <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateManuMaterial(i, { name: v })}
-                      onPick={it => updateManuMaterial(i, { price: String(it.purchase_price ?? '') })}
+                    <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateManuMaterial(i, { name: v, priceIsUnit: false })}
+                      onPick={it => updateManuMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
                       excludeNames={manuMaterials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
                     <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateManuMaterial(i, { qty: e.target.value })} placeholder="Qty" />
-                    <input type="number" min="0" step="0.01" className="field" value={m.price} onChange={e => updateManuMaterial(i, { price: e.target.value })} placeholder="Price" />
+                    <input type="number" min="0" step="0.01" className="field"
+                      value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
+                      onChange={e => updateManuMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
+                      style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
                     <button type="button" onClick={() => removeManuMaterial(i)} disabled={manuMaterials.length === 1}
                       className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuMaterials.length === 1 ? 0.3 : 1 }}>×</button>
                   </div>
@@ -367,8 +379,9 @@ export default function FinishedGoodsPage() {
               </div>
 
               {/* Work Type */}
-              <div style={{ marginBottom: 8 }}>
+              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
+                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {manuWorkTotal.toFixed(2)}</strong></span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {manuWorkLines.map((w, i) => (
