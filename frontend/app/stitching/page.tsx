@@ -262,7 +262,6 @@ export default function StitchingPage() {
 
   // ── Register (right pane) search + totals ───────────────────────────────
   const itemNames = Array.from(new Set(productionItems.map(it => it.name))).sort()
-  const totalQty = records.reduce((s, r) => s + r.materials.reduce((s2, m) => s2 + Number(m.qty), 0), 0)
   const totalAmt = records.reduce((s, r) => s + r.materials_total + r.work_total, 0)
   const handlePrint = () => window.print()
   const workTypeOptions = Array.from(new Set([
@@ -632,7 +631,6 @@ export default function StitchingPage() {
               )}
               {!loading && records.length > 0 && (
                 <div style={{ padding: '12px 16px', borderTop: '1px solid #e8ecf0', background: '#f8f9fb', display: 'flex', justifyContent: 'flex-end', gap: 24 }}>
-                  <span style={{ fontSize: 13, color: '#374151' }}>Total Qty: <strong>{totalQty.toFixed(2)}</strong></span>
                   <span style={{ fontSize: 13, color: '#374151' }}>Total Amt: <strong>AED {totalAmt.toFixed(2)}</strong></span>
                 </div>
               )}
