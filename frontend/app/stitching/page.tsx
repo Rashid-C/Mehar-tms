@@ -457,7 +457,7 @@ export default function StitchingPage() {
                         <th>Ref No</th>
                         <th>MD No</th>
                         <th style={{ fontWeight: 800 }}>ALLOCATION</th>
-                        <th>Materials</th>
+                        <th>No MTR</th>
                         <th>Mat TTL</th>
                         <th>Tailors (Work)</th>
                         <th>WRK TTL</th>
@@ -531,6 +531,15 @@ export default function StitchingPage() {
                                       <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No materials yet.</p>
                                     ) : (
                                       <table className="z-table">
+                                        <thead>
+                                          <tr>
+                                            <th>Name</th>
+                                            <th>Qty</th>
+                                            <th>Price</th>
+                                            <th>Remarks</th>
+                                            <th></th>
+                                          </tr>
+                                        </thead>
                                         <tbody>
                                           {r.materials.map(m => (
                                             <tr key={m.id} style={{ background: editMatId === m.id ? '#f5f3ff' : undefined }}>
@@ -586,6 +595,16 @@ export default function StitchingPage() {
                                       <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No work lines yet.</p>
                                     ) : (
                                       <table className="z-table">
+                                        <thead>
+                                          <tr>
+                                            <th>Date</th>
+                                            <th>Tailor</th>
+                                            <th>Work Type</th>
+                                            <th>Remarks</th>
+                                            <th>Rate</th>
+                                            <th></th>
+                                          </tr>
+                                        </thead>
                                         <tbody>
                                           {r.work_lines.map(w => (
                                             <tr key={w.id} style={{ background: editWorkId === w.id ? '#f0fdf4' : undefined }}>
