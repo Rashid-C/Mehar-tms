@@ -126,6 +126,7 @@ export interface AllocationMaterial {
   name: string
   qty: number
   price: number
+  remarks: string
 }
 
 export interface StitchingWorkLine {
@@ -137,6 +138,7 @@ export interface StitchingWorkLine {
   work_type: string
   rate: number
   date: string
+  remarks: string
 }
 
 export interface StitchingReference {

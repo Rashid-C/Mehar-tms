@@ -15,8 +15,8 @@ const lastOfMonth = () => { const d = new Date(); return new Date(d.getFullYear(
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 const DEFAULT_WORK_TYPES = ['Stitching', 'Cutting', 'Finishing', 'Packing', 'Ironing', 'Embroidery']
 
-type MaterialRow = { name: string; qty: string; price: string; priceIsUnit: boolean }
-type WorkRow = { tailor: string; rate: string; date: string; work_type: string }
+type MaterialRow = { name: string; qty: string; price: string; priceIsUnit: boolean; remarks: string }
+type WorkRow = { tailor: string; rate: string; date: string; work_type: string; remarks: string }
 
 function MaterialNameInput({ value, items, onChange, onPick, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; onPick?: (item: Item) => void; excludeNames?: string[] }) {
   const [showList, setShowList] = useState(false)
@@ -70,8 +70,8 @@ export default function StitchingPage() {
   const [invNo, setInvNo] = useState('')
   const [allocationTailor, setAllocationTailor] = useState('')
   const [remarks, setRemarks] = useState('')
-  const [materials, setMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '', priceIsUnit: false }])
-  const [workLines, setWorkLines] = useState<WorkRow[]>([{ tailor: '', rate: '', date: today(), work_type: 'Stitching' }])
+  const [materials, setMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
+  const [workLines, setWorkLines] = useState<WorkRow[]>([{ tailor: '', rate: '', date: today(), work_type: 'Stitching', remarks: '' }])
   const [saving, setSaving] = useState(false)
   const [createError, setCreateError] = useState('')
 
@@ -80,11 +80,13 @@ export default function StitchingPage() {
   const [matQty, setMatQty] = useState('')
   const [matPrice, setMatPrice] = useState('')
   const [matPriceIsUnit, setMatPriceIsUnit] = useState(false)
+  const [matRemarks, setMatRemarks] = useState('')
   const [editMatId, setEditMatId] = useState<number | null>(null)
   const [workTailor, setWorkTailor] = useState('')
   const [workType, setWorkType] = useState('Stitching')
   const [workRate, setWorkRate] = useState('')
   const [workDate, setWorkDate] = useState(today())
+  const [workRemarks, setWorkRemarks] = useState('')
   const [editWorkId, setEditWorkId] = useState<number | null>(null)
   const [savingMat, setSavingMat] = useState(false)
   const [savingWork, setSavingWork] = useState(false)
@@ -127,8 +129,8 @@ export default function StitchingPage() {
   const resetForm = () => {
     setCreateError('')
     setMdNo(''); setInvNo(''); setAllocationTailor(''); setRemarks('')
-    setMaterials([{ name: '', qty: '', price: '', priceIsUnit: false }])
-    setWorkLines([{ tailor: '', rate: '', date: today(), work_type: 'Stitching' }])
+    setMaterials([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
+    setWorkLines([{ tailor: '', rate: '', date: today(), work_type: 'Stitching', remarks: '' }])
     getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
   }
 
@@ -138,11 +140,11 @@ export default function StitchingPage() {
   const workTotal = workLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
 
   const updateMaterial = (i: number, patch: Partial<MaterialRow>) => setMaterials(prev => prev.map((m, idx) => idx === i ? { ...m, ...patch } : m))
-  const addMaterial = () => setMaterials(prev => [...prev, { name: '', qty: '', price: '', priceIsUnit: false }])
+  const addMaterial = () => setMaterials(prev => [...prev, { name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
   const removeMaterial = (i: number) => setMaterials(prev => prev.filter((_, idx) => idx !== i))
 
   const updateWork = (i: number, patch: Partial<WorkRow>) => setWorkLines(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w))
-  const addWork = () => setWorkLines(prev => [...prev, { tailor: '', rate: '', date: today(), work_type: 'Stitching' }])
+  const addWork = () => setWorkLines(prev => [...prev, { tailor: '', rate: '', date: today(), work_type: 'Stitching', remarks: '' }])
   const removeWork = (i: number) => setWorkLines(prev => prev.filter((_, idx) => idx !== i))
 
   const handleCreate = async () => {
@@ -157,8 +159,8 @@ export default function StitchingPage() {
     try {
       await createStitchingReference({
         ref_no: refNo, md_no: mdNo, inv_no: invNo, tailor: parseInt(referenceTailor), remarks,
-        materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0 })),
-        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date })),
+        materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0, remarks: m.remarks })),
+        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date, remarks: w.remarks })),
       })
       notify(`Reference ${refNo} created`)
       resetForm()
@@ -173,8 +175,8 @@ export default function StitchingPage() {
   const toggleExpand = (r: StitchingReference) => {
     if (expandedId === r.id) { setExpandedId(null); return }
     setExpandedId(r.id)
-    setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setEditMatId(null)
-    setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null)
+    setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setMatRemarks(''); setEditMatId(null)
+    setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setWorkRemarks(''); setEditWorkId(null)
   }
 
   const handleDeleteRef = async (id: number, e: React.MouseEvent) => {
@@ -199,21 +201,21 @@ export default function StitchingPage() {
     if (!matName) { fail('Material name is required'); return }
     setSavingMat(true)
     try {
-      const payload = { reference: referenceId, name: matName, qty: parseFloat(matQty) || 0, price: parseFloat(matPrice) || 0 }
+      const payload = { reference: referenceId, name: matName, qty: parseFloat(matQty) || 0, price: parseFloat(matPrice) || 0, remarks: matRemarks }
       if (editMatId) { await updateStitchingMaterial(editMatId, payload); notify('Material updated') }
       else { await createStitchingMaterial(payload); notify('Material added') }
-      setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setEditMatId(null); await fetchData()
+      setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setMatRemarks(''); setEditMatId(null); await fetchData()
     } catch { fail('Failed to save material') } finally { setSavingMat(false) }
   }
 
   const handleEditMaterial = (m: AllocationMaterial, e: React.MouseEvent) => {
     e.stopPropagation()
-    setMatName(m.name); setMatQty(String(m.qty)); setMatPrice(String(m.price)); setMatPriceIsUnit(false); setEditMatId(m.id)
+    setMatName(m.name); setMatQty(String(m.qty)); setMatPrice(String(m.price)); setMatPriceIsUnit(false); setMatRemarks(m.remarks || ''); setEditMatId(m.id)
   }
 
   const cancelEditMaterial = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setEditMatId(null)
+    setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setMatRemarks(''); setEditMatId(null)
   }
 
   const handleDeleteMaterial = async (matId: number, e: React.MouseEvent) => {
@@ -221,7 +223,7 @@ export default function StitchingPage() {
     if (!confirm('Remove this material?')) return
     try {
       await deleteStitchingMaterial(matId)
-      if (editMatId === matId) { setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setEditMatId(null) }
+      if (editMatId === matId) { setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setMatRemarks(''); setEditMatId(null) }
       await fetchData()
     } catch { fail('Failed to delete') }
   }
@@ -231,21 +233,21 @@ export default function StitchingPage() {
     if (!workTailor || !workRate || !workDate) { fail('Tailor, Rate and Date are required'); return }
     setSavingWork(true)
     try {
-      const payload = { reference: referenceId, tailor: parseInt(workTailor), work_type: workType || 'Stitching', rate: parseFloat(workRate), date: workDate }
+      const payload = { reference: referenceId, tailor: parseInt(workTailor), work_type: workType || 'Stitching', rate: parseFloat(workRate), date: workDate, remarks: workRemarks }
       if (editWorkId) { await updateStitchingWorkLine(editWorkId, payload); notify('Work line updated') }
       else { await createStitchingWorkLine(payload); notify('Work line added') }
-      setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null); await fetchData()
+      setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setWorkRemarks(''); setEditWorkId(null); await fetchData()
     } catch { fail('Failed to save work line') } finally { setSavingWork(false) }
   }
 
   const handleEditWork = (w: StitchingWorkLine, e: React.MouseEvent) => {
     e.stopPropagation()
-    setWorkTailor(String(w.tailor)); setWorkType(w.work_type || 'Stitching'); setWorkRate(String(w.rate)); setWorkDate(w.date); setEditWorkId(w.id)
+    setWorkTailor(String(w.tailor)); setWorkType(w.work_type || 'Stitching'); setWorkRate(String(w.rate)); setWorkDate(w.date); setWorkRemarks(w.remarks || ''); setEditWorkId(w.id)
   }
 
   const cancelEditWork = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null)
+    setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setWorkRemarks(''); setEditWorkId(null)
   }
 
   const handleDeleteWork = async (lineId: number, e: React.MouseEvent) => {
@@ -253,7 +255,7 @@ export default function StitchingPage() {
     if (!confirm('Delete this work line?')) return
     try {
       await deleteStitchingWorkLine(lineId)
-      if (editWorkId === lineId) { setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setEditWorkId(null) }
+      if (editWorkId === lineId) { setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setWorkRemarks(''); setEditWorkId(null) }
       await fetchData()
     } catch { fail('Failed to delete') }
   }
@@ -338,13 +340,14 @@ export default function StitchingPage() {
                         onPick={it => updateMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
                         excludeNames={materials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
                       <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateMaterial(i, { qty: e.target.value })} placeholder="Qty" />
                       <input type="number" min="0" step="0.01" className="field"
                         value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
                         onChange={e => updateMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
                         style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
                     </div>
+                    <input className="field" value={m.remarks} onChange={e => updateMaterial(i, { remarks: e.target.value })} placeholder="Remarks…" />
                   </div>
                 ))}
                 <button type="button" onClick={addMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
@@ -375,10 +378,11 @@ export default function StitchingPage() {
                       <input className="field" list="work-type-options" value={w.work_type} onChange={e => updateWork(i, { work_type: e.target.value })}
                         placeholder="Work type — e.g. Stitching, Cutting…" />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
                       <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateWork(i, { rate: e.target.value })} placeholder="Rate" />
                       <input type="date" className="field" value={w.date} onChange={e => updateWork(i, { date: e.target.value })} />
                     </div>
+                    <input className="field" value={w.remarks} onChange={e => updateWork(i, { remarks: e.target.value })} placeholder="Remarks…" />
                   </div>
                 ))}
                 <button type="button" onClick={addWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
@@ -508,18 +512,21 @@ export default function StitchingPage() {
                                         <button onClick={cancelEditMaterial} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
                                       )}
                                     </div>
-                                    <form onSubmit={e => handleSaveMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
-                                      <MaterialNameInput value={matName} items={productionItems} onChange={v => { setMatName(v); setMatPriceIsUnit(false) }}
-                                        onPick={it => { setMatPrice(String(it.purchase_price ?? '')); setMatPriceIsUnit(true) }}
-                                        excludeNames={r.materials.filter(mm => mm.id !== editMatId).map(mm => mm.name)} />
-                                      <input type="number" min="0" step="0.01" className="field" value={matQty} onChange={e => setMatQty(e.target.value)} placeholder="Qty" />
-                                      <input type="number" min="0" step="0.01" className="field"
-                                        value={matPriceIsUnit ? ((parseFloat(matQty) || 0) * (parseFloat(matPrice) || 0)).toFixed(2) : matPrice}
-                                        onChange={e => setMatPrice(e.target.value)} readOnly={matPriceIsUnit}
-                                        style={{ background: matPriceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
-                                      <button type="submit" disabled={savingMat} className="btn-gold" style={{ background: '#7c3aed', padding: '8px 12px', fontSize: 12 }}>
-                                        {editMatId ? '✓' : '+'}
-                                      </button>
+                                    <form onSubmit={e => handleSaveMaterial(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                        <MaterialNameInput value={matName} items={productionItems} onChange={v => { setMatName(v); setMatPriceIsUnit(false) }}
+                                          onPick={it => { setMatPrice(String(it.purchase_price ?? '')); setMatPriceIsUnit(true) }}
+                                          excludeNames={r.materials.filter(mm => mm.id !== editMatId).map(mm => mm.name)} />
+                                        <input type="number" min="0" step="0.01" className="field" value={matQty} onChange={e => setMatQty(e.target.value)} placeholder="Qty" />
+                                        <input type="number" min="0" step="0.01" className="field"
+                                          value={matPriceIsUnit ? ((parseFloat(matQty) || 0) * (parseFloat(matPrice) || 0)).toFixed(2) : matPrice}
+                                          onChange={e => setMatPrice(e.target.value)} readOnly={matPriceIsUnit}
+                                          style={{ background: matPriceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
+                                        <button type="submit" disabled={savingMat} className="btn-gold" style={{ background: '#7c3aed', padding: '8px 12px', fontSize: 12 }}>
+                                          {editMatId ? '✓' : '+'}
+                                        </button>
+                                      </div>
+                                      <input className="field" value={matRemarks} onChange={e => setMatRemarks(e.target.value)} placeholder="Remarks…" />
                                     </form>
                                     {r.materials.length === 0 ? (
                                       <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No materials yet.</p>
@@ -531,6 +538,7 @@ export default function StitchingPage() {
                                               <td style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</td>
                                               <td style={{ fontSize: 12 }}>{m.qty}</td>
                                               <td style={{ fontSize: 12 }}>{m.price}</td>
+                                              <td style={{ fontSize: 12, color: '#9ca3af' }}>{m.remarks || '—'}</td>
                                               <td>
                                                 <div style={{ display: 'flex', gap: 4 }}>
                                                   <button onClick={e => handleEditMaterial(m, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
@@ -544,6 +552,7 @@ export default function StitchingPage() {
                                           <tr>
                                             <td colSpan={2} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
                                             <td style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{r.materials_total}</td>
+                                            <td />
                                             <td />
                                           </tr>
                                         </tfoot>
@@ -559,17 +568,20 @@ export default function StitchingPage() {
                                         <button onClick={cancelEditWork} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
                                       )}
                                     </div>
-                                    <form onSubmit={e => handleSaveWork(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'grid', gridTemplateColumns: '1.3fr 1.2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
-                                      <select className="field" value={workTailor} onChange={e => setWorkTailor(e.target.value)}>
-                                        <option value="">Tailor</option>
-                                        {tailors.map(t => <option key={t.id} value={t.id}>{t.code}</option>)}
-                                      </select>
-                                      <input className="field" list="work-type-options" value={workType} onChange={e => setWorkType(e.target.value)} placeholder="Work type" />
-                                      <input type="number" min="0" step="0.01" className="field" value={workRate} onChange={e => setWorkRate(e.target.value)} placeholder="Rate" />
-                                      <input type="date" className="field" value={workDate} onChange={e => setWorkDate(e.target.value)} />
-                                      <button type="submit" disabled={savingWork} className="btn-gold" style={{ background: '#16a34a', padding: '8px 12px', fontSize: 12 }}>
-                                        {editWorkId ? '✓' : '+'}
-                                      </button>
+                                    <form onSubmit={e => handleSaveWork(r.id, e)} style={{ padding: 12, borderBottom: '1px solid #e8ecf0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1.2fr 1fr 1fr auto', gap: 6, alignItems: 'end' }}>
+                                        <select className="field" value={workTailor} onChange={e => setWorkTailor(e.target.value)}>
+                                          <option value="">Tailor</option>
+                                          {tailors.map(t => <option key={t.id} value={t.id}>{t.code}</option>)}
+                                        </select>
+                                        <input className="field" list="work-type-options" value={workType} onChange={e => setWorkType(e.target.value)} placeholder="Work type" />
+                                        <input type="number" min="0" step="0.01" className="field" value={workRate} onChange={e => setWorkRate(e.target.value)} placeholder="Rate" />
+                                        <input type="date" className="field" value={workDate} onChange={e => setWorkDate(e.target.value)} />
+                                        <button type="submit" disabled={savingWork} className="btn-gold" style={{ background: '#16a34a', padding: '8px 12px', fontSize: 12 }}>
+                                          {editWorkId ? '✓' : '+'}
+                                        </button>
+                                      </div>
+                                      <input className="field" value={workRemarks} onChange={e => setWorkRemarks(e.target.value)} placeholder="Remarks…" />
                                     </form>
                                     {r.work_lines.length === 0 ? (
                                       <p style={{ textAlign: 'center', padding: 16, color: '#9ca3af', fontSize: 12 }}>No work lines yet.</p>
@@ -581,6 +593,7 @@ export default function StitchingPage() {
                                               <td style={{ fontSize: 12, color: '#6b7280' }}>{w.date}</td>
                                               <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{w.tailor_code}</span></td>
                                               <td style={{ fontSize: 12, color: '#374151' }}>{w.work_type || '—'}</td>
+                                              <td style={{ fontSize: 12, color: '#9ca3af' }}>{w.remarks || '—'}</td>
                                               <td style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>AED {w.rate}</td>
                                               <td>
                                                 <div style={{ display: 'flex', gap: 4 }}>
@@ -593,7 +606,7 @@ export default function StitchingPage() {
                                         </tbody>
                                         <tfoot>
                                           <tr>
-                                            <td colSpan={3} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
+                                            <td colSpan={4} style={{ fontWeight: 700, fontSize: 12 }}>Total</td>
                                             <td style={{ fontWeight: 700, fontSize: 12, color: '#16a34a' }}>AED {r.work_total.toFixed(2)}</td>
                                             <td />
                                           </tr>

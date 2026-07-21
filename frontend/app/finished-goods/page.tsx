@@ -13,8 +13,8 @@ const DEFAULT_WORK_TYPES = ['Stitching', 'Cutting', 'Finishing', 'Packing', 'Iro
 const lbl: React.CSSProperties = { fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 5 }
 
 type EditForm = { item_name: string; qty: string; cost_price: string; selling_price: string; date: string; remarks: string }
-type MaterialRow = { name: string; qty: string; price: string; priceIsUnit: boolean }
-type WorkRow = { tailor: string; work_type: string; rate: string; date: string }
+type MaterialRow = { name: string; qty: string; price: string; priceIsUnit: boolean; remarks: string }
+type WorkRow = { tailor: string; work_type: string; rate: string; date: string; remarks: string }
 
 function MaterialNameInput({ value, items, onChange, onPick, excludeNames = [] }: { value: string; items: Item[]; onChange: (v: string) => void; onPick?: (item: Item) => void; excludeNames?: string[] }) {
   const [showList, setShowList] = useState(false)
@@ -69,8 +69,8 @@ export default function FinishedGoodsPage() {
   const [manuMdNo, setManuMdNo] = useState('')
   const [manuTailor, setManuTailor] = useState('')
   const [manuRemarks, setManuRemarks] = useState('')
-  const [manuMaterials, setManuMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '', priceIsUnit: false }])
-  const [manuWorkLines, setManuWorkLines] = useState<WorkRow[]>([{ tailor: '', work_type: 'Stitching', rate: '', date: today() }])
+  const [manuMaterials, setManuMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
+  const [manuWorkLines, setManuWorkLines] = useState<WorkRow[]>([{ tailor: '', work_type: 'Stitching', rate: '', date: today(), remarks: '' }])
   const [manuSaving, setManuSaving] = useState(false)
   const [manuError, setManuError] = useState('')
 
@@ -143,8 +143,8 @@ export default function FinishedGoodsPage() {
   const openManufacture = () => {
     setManuError('')
     setManuMdNo(''); setManuTailor(''); setManuRemarks('')
-    setManuMaterials([{ name: '', qty: '', price: '', priceIsUnit: false }])
-    setManuWorkLines([{ tailor: '', work_type: 'Stitching', rate: '', date: today() }])
+    setManuMaterials([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
+    setManuWorkLines([{ tailor: '', work_type: 'Stitching', rate: '', date: today(), remarks: '' }])
     getNextStitchingRefNo().then(r => setManuRefNo(r.data.next_ref_no))
     setManufactureOpen(true)
   }
@@ -154,11 +154,11 @@ export default function FinishedGoodsPage() {
   const manuWorkTotal = manuWorkLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
 
   const updateManuMaterial = (i: number, patch: Partial<MaterialRow>) => setManuMaterials(prev => prev.map((m, idx) => idx === i ? { ...m, ...patch } : m))
-  const addManuMaterial = () => setManuMaterials(prev => [...prev, { name: '', qty: '', price: '', priceIsUnit: false }])
+  const addManuMaterial = () => setManuMaterials(prev => [...prev, { name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
   const removeManuMaterial = (i: number) => setManuMaterials(prev => prev.filter((_, idx) => idx !== i))
 
   const updateManuWork = (i: number, patch: Partial<WorkRow>) => setManuWorkLines(prev => prev.map((w, idx) => idx === i ? { ...w, ...patch } : w))
-  const addManuWork = () => setManuWorkLines(prev => [...prev, { tailor: '', work_type: 'Stitching', rate: '', date: today() }])
+  const addManuWork = () => setManuWorkLines(prev => [...prev, { tailor: '', work_type: 'Stitching', rate: '', date: today(), remarks: '' }])
   const removeManuWork = (i: number) => setManuWorkLines(prev => prev.filter((_, idx) => idx !== i))
 
   const handleManufacture = async () => {
@@ -173,8 +173,8 @@ export default function FinishedGoodsPage() {
     try {
       const created = await createStitchingReference({
         ref_no: manuRefNo, md_no: manuMdNo, inv_no: '', tailor: parseInt(referenceTailor), remarks: manuRemarks,
-        materials: manuMaterials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0 })),
-        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date })),
+        materials: manuMaterials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0, remarks: m.remarks })),
+        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date, remarks: w.remarks })),
       })
       await finishStitchingReference(created.data.id)
       notify(`Reference ${manuRefNo} manufactured`)
@@ -360,17 +360,20 @@ export default function FinishedGoodsPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {manuMaterials.map((m, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                    <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateManuMaterial(i, { name: v, priceIsUnit: false })}
-                      onPick={it => updateManuMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
-                      excludeNames={manuMaterials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
-                    <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateManuMaterial(i, { qty: e.target.value })} placeholder="Qty" />
-                    <input type="number" min="0" step="0.01" className="field"
-                      value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
-                      onChange={e => updateManuMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
-                      style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
-                    <button type="button" onClick={() => removeManuMaterial(i)} disabled={manuMaterials.length === 1}
-                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuMaterials.length === 1 ? 0.3 : 1 }}>×</button>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                      <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateManuMaterial(i, { name: v, priceIsUnit: false })}
+                        onPick={it => updateManuMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
+                        excludeNames={manuMaterials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
+                      <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateManuMaterial(i, { qty: e.target.value })} placeholder="Qty" />
+                      <input type="number" min="0" step="0.01" className="field"
+                        value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
+                        onChange={e => updateManuMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
+                        style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
+                      <button type="button" onClick={() => removeManuMaterial(i)} disabled={manuMaterials.length === 1}
+                        className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuMaterials.length === 1 ? 0.3 : 1 }}>×</button>
+                    </div>
+                    <input className="field" value={m.remarks} onChange={e => updateManuMaterial(i, { remarks: e.target.value })} placeholder="Remarks…" />
                   </div>
                 ))}
                 <button type="button" onClick={addManuMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
@@ -385,16 +388,19 @@ export default function FinishedGoodsPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                 {manuWorkLines.map((w, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.3fr 1.2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                    <select className="field" value={w.tailor} onChange={e => updateManuWork(i, { tailor: e.target.value })}>
-                      <option value="">Tailor</option>
-                      {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
-                    </select>
-                    <input className="field" list="fg-work-type-options" value={w.work_type} onChange={e => updateManuWork(i, { work_type: e.target.value })} placeholder="Stitching, Cutting…" />
-                    <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateManuWork(i, { rate: e.target.value })} placeholder="Rate" />
-                    <input type="date" className="field" value={w.date} onChange={e => updateManuWork(i, { date: e.target.value })} />
-                    <button type="button" onClick={() => removeManuWork(i)} disabled={manuWorkLines.length === 1}
-                      className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuWorkLines.length === 1 ? 0.3 : 1 }}>×</button>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1.2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                      <select className="field" value={w.tailor} onChange={e => updateManuWork(i, { tailor: e.target.value })}>
+                        <option value="">Tailor</option>
+                        {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                      </select>
+                      <input className="field" list="fg-work-type-options" value={w.work_type} onChange={e => updateManuWork(i, { work_type: e.target.value })} placeholder="Stitching, Cutting…" />
+                      <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateManuWork(i, { rate: e.target.value })} placeholder="Rate" />
+                      <input type="date" className="field" value={w.date} onChange={e => updateManuWork(i, { date: e.target.value })} />
+                      <button type="button" onClick={() => removeManuWork(i)} disabled={manuWorkLines.length === 1}
+                        className="btn-ghost" style={{ padding: '8px 10px', fontSize: 13, opacity: manuWorkLines.length === 1 ? 0.3 : 1 }}>×</button>
+                    </div>
+                    <input className="field" value={w.remarks} onChange={e => updateManuWork(i, { remarks: e.target.value })} placeholder="Remarks…" />
                   </div>
                 ))}
                 <datalist id="fg-work-type-options">
