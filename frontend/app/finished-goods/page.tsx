@@ -165,7 +165,7 @@ export default function FinishedGoodsPage() {
     setManuError('')
     const validWork = manuWorkLines.filter(w => w.tailor && w.rate && w.date)
     if (!manuTailor && validWork.length === 0) {
-      setManuError('Select an Allocation Cut tailor or add at least one stitching work line (Tailor, Rate, Date)')
+      setManuError('Select an Allocation tailor or add at least one stitching work line (Tailor, Rate, Date)')
       return
     }
     const referenceTailor = manuTailor || validWork[0].tailor
@@ -257,7 +257,7 @@ export default function FinishedGoodsPage() {
                   <tr>
                     <th>Ref No</th>
                     <th>MD No</th>
-                    <th>Allocation Cut</th>
+                    <th style={{ fontWeight: 800 }}>ALLOCATION</th>
                     <th>Item Name</th>
                     <th>Qty</th>
                     <th>Cost Price</th>
@@ -340,7 +340,7 @@ export default function FinishedGoodsPage() {
                   <input className="field" value={manuMdNo} onChange={e => setManuMdNo(e.target.value)} placeholder="Editable model no…" />
                 </div>
                 <div>
-                  <label style={lbl}>Allocation Cut (Tailor / Party)</label>
+                  <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION (Tailor / Party)</label>
                   <select className="field" value={manuTailor} onChange={e => setManuTailor(e.target.value)}>
                     <option value="">Select tailor</option>
                     {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}

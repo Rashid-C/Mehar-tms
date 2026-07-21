@@ -151,7 +151,7 @@ export default function StitchingPage() {
     setCreateError('')
     const validWork = workLines.filter(w => w.tailor && w.rate && w.date)
     if (!allocationTailor && validWork.length === 0) {
-      setCreateError('Select an Allocation Cut tailor or add at least one stitching work line (Tailor, Rate, Date)')
+      setCreateError('Select an Allocation tailor or add at least one stitching work line (Tailor, Rate, Date)')
       return
     }
     const referenceTailor = allocationTailor || validWork[0].tailor
@@ -309,7 +309,7 @@ export default function StitchingPage() {
                 <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
               </div>
               <div style={{ marginBottom: 16 }}>
-                <label style={lbl}>Allocation Cut (Tailor / Party) — required if no stitching work is added</label>
+                <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION (Tailor / Party) — required if no stitching work is added</label>
                 <select className="field" value={allocationTailor} onChange={e => setAllocationTailor(e.target.value)}>
                   <option value="">Select tailor</option>
                   {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
@@ -456,7 +456,7 @@ export default function StitchingPage() {
                       <tr>
                         <th>Ref No</th>
                         <th>MD No</th>
-                        <th>Allocation Cut</th>
+                        <th style={{ fontWeight: 800 }}>ALLOCATION</th>
                         <th>Materials</th>
                         <th>Materials Total</th>
                         <th>Tailors (Work)</th>
