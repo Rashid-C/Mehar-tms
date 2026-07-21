@@ -458,9 +458,9 @@ export default function StitchingPage() {
                         <th>MD No</th>
                         <th style={{ fontWeight: 800 }}>ALLOCATION</th>
                         <th>Materials</th>
-                        <th>Materials Total</th>
+                        <th>Mat TTL</th>
                         <th>Tailors (Work)</th>
-                        <th>Work Total</th>
+                        <th>WRK TTL</th>
                         <th>Inv No</th>
                         <th>Remarks</th>
                         <th className="no-print"></th>
