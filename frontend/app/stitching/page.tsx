@@ -319,11 +319,11 @@ export default function StitchingPage() {
         {success && <div className="no-print" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{success}</div>}
         {error && <div className="no-print" style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{error}</div>}
 
-        <div className={showCreate ? 'grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-5' : 'grid grid-cols-1 gap-5'}>
-
-          {/* ── Left pane: Production Entry form (opens on demand) ─────────── */}
-          {showCreate && (
-          <div className="no-print card" style={{ overflow: 'hidden', alignSelf: 'start' }}>
+        {/* ── Production Entry — modal overlay, opens on demand ───────────── */}
+        {showCreate && (
+          <div className="no-print" onClick={closeCreate}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} className="card" style={{ width: '100%', maxWidth: 960, maxHeight: '92vh', overflowY: 'auto' }}>
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>Production Entry</span>
               <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
@@ -333,20 +333,22 @@ export default function StitchingPage() {
             <div style={{ padding: 16 }}>
               {createError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{createError}</div>}
 
-              <div style={{ marginBottom: 14 }}>
-                <label style={lbl}>Model Number</label>
-                <input className="field" value={mdNo} onChange={e => setMdNo(e.target.value)} placeholder="Editable model no…" />
-              </div>
-              <div style={{ marginBottom: 14 }}>
-                <label style={lbl}>Inv No</label>
-                <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
-              </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION (Tailor / Party) — required if no stitching work is added</label>
-                <select className="field" value={allocationTailor} onChange={e => setAllocationTailor(e.target.value)}>
-                  <option value="">Select tailor</option>
-                  {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ marginBottom: 16 }}>
+                <div>
+                  <label style={lbl}>Model Number</label>
+                  <input className="field" value={mdNo} onChange={e => setMdNo(e.target.value)} placeholder="Editable model no…" />
+                </div>
+                <div>
+                  <label style={lbl}>Inv No</label>
+                  <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
+                </div>
+                <div>
+                  <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION — required if no work added</label>
+                  <select className="field" value={allocationTailor} onChange={e => setAllocationTailor(e.target.value)}>
+                    <option value="">Select tailor</option>
+                    {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 16 }}>
@@ -354,72 +356,78 @@ export default function StitchingPage() {
                 <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>AED {(materialsTotal + workTotal).toFixed(2)}</span>
               </div>
 
-              {/* Materials */}
-              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{materialsTotal.toFixed(2)}</strong></span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-                {materials.map((m, i) => (
-                  <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Material {i + 1}</span>
-                      <button type="button" onClick={() => removeMaterial(i)} disabled={materials.length === 1}
-                        className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: materials.length === 1 ? 0.3 : 1 }}>×</button>
-                    </div>
-                    <div style={{ marginBottom: 6 }}>
-                      <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateMaterial(i, { name: v, priceIsUnit: false })}
-                        onPick={it => updateMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
-                        excludeNames={materials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
-                      <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateMaterial(i, { qty: e.target.value })} placeholder="Qty" />
-                      <input type="number" min="0" step="0.01" className="field"
-                        value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
-                        onChange={e => updateMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
-                        style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
-                    </div>
-                    <input className="field" value={m.remarks} onChange={e => updateMaterial(i, { remarks: e.target.value })} placeholder="Remarks…" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  {/* Materials */}
+                  <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{materialsTotal.toFixed(2)}</strong></span>
                   </div>
-                ))}
-                <button type="button" onClick={addMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                  + Add Material {materials.length + 1}
-                </button>
-              </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                    {materials.map((m, i) => (
+                      <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Material {i + 1}</span>
+                          <button type="button" onClick={() => removeMaterial(i)} disabled={materials.length === 1}
+                            className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: materials.length === 1 ? 0.3 : 1 }}>×</button>
+                        </div>
+                        <div style={{ marginBottom: 6 }}>
+                          <MaterialNameInput value={m.name} items={productionItems} onChange={v => updateMaterial(i, { name: v, priceIsUnit: false })}
+                            onPick={it => updateMaterial(i, { price: String(it.purchase_price ?? ''), priceIsUnit: true })}
+                            excludeNames={materials.filter((_, idx) => idx !== i).map(mm => mm.name)} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                          <input type="number" min="0" step="0.01" className="field" value={m.qty} onChange={e => updateMaterial(i, { qty: e.target.value })} placeholder="Qty" />
+                          <input type="number" min="0" step="0.01" className="field"
+                            value={m.priceIsUnit ? ((parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0)).toFixed(2) : m.price}
+                            onChange={e => updateMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
+                            style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
+                        </div>
+                        <input className="field" value={m.remarks} onChange={e => updateMaterial(i, { remarks: e.target.value })} placeholder="Remarks…" />
+                      </div>
+                    ))}
+                    <button type="button" onClick={addMaterial} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                      + Add Material {materials.length + 1}
+                    </button>
+                  </div>
+                </div>
 
-              {/* Work Type */}
-              <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {workTotal.toFixed(2)}</strong></span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-                {workLines.map((w, i) => (
-                  <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Work {i + 1}</span>
-                      <button type="button" onClick={() => removeWork(i)} disabled={workLines.length === 1}
-                        className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: workLines.length === 1 ? 0.3 : 1 }}>×</button>
-                    </div>
-                    <div style={{ marginBottom: 6 }}>
-                      <select className="field" value={w.tailor} onChange={e => updateWork(i, { tailor: e.target.value })}>
-                        <option value="">Select tailor</option>
-                        {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ marginBottom: 6 }}>
-                      <input className="field" list="work-type-options" value={w.work_type} onChange={e => updateWork(i, { work_type: e.target.value })}
-                        placeholder="Work type — e.g. Stitching, Cutting…" />
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
-                      <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateWork(i, { rate: e.target.value })} placeholder="Rate" />
-                      <input type="date" className="field" value={w.date} onChange={e => updateWork(i, { date: e.target.value })} />
-                    </div>
-                    <input className="field" value={w.remarks} onChange={e => updateWork(i, { remarks: e.target.value })} placeholder="Remarks…" />
+                <div>
+                  {/* Work Type */}
+                  <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {workTotal.toFixed(2)}</strong></span>
                   </div>
-                ))}
-                <button type="button" onClick={addWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                  + Add Work {workLines.length + 1}
-                </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                    {workLines.map((w, i) => (
+                      <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Work {i + 1}</span>
+                          <button type="button" onClick={() => removeWork(i)} disabled={workLines.length === 1}
+                            className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: workLines.length === 1 ? 0.3 : 1 }}>×</button>
+                        </div>
+                        <div style={{ marginBottom: 6 }}>
+                          <select className="field" value={w.tailor} onChange={e => updateWork(i, { tailor: e.target.value })}>
+                            <option value="">Select tailor</option>
+                            {tailors.map(t => <option key={t.id} value={t.id}>{t.code} — {t.name}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ marginBottom: 6 }}>
+                          <input className="field" list="work-type-options" value={w.work_type} onChange={e => updateWork(i, { work_type: e.target.value })}
+                            placeholder="Work type — e.g. Stitching, Cutting…" />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                          <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateWork(i, { rate: e.target.value })} placeholder="Rate" />
+                          <input type="date" className="field" value={w.date} onChange={e => updateWork(i, { date: e.target.value })} />
+                        </div>
+                        <input className="field" value={w.remarks} onChange={e => updateWork(i, { remarks: e.target.value })} placeholder="Remarks…" />
+                      </div>
+                    ))}
+                    <button type="button" onClick={addWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
+                      + Add Work {workLines.length + 1}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div style={{ marginBottom: 16 }}>
@@ -435,10 +443,11 @@ export default function StitchingPage() {
               </div>
             </div>
           </div>
-          )}
+          </div>
+        )}
 
-          {/* ── Right pane: Stitching Register ─────────────────────────────── */}
-          <div>
+        {/* ── Stitching Register ───────────────────────────────────────────── */}
+        <div>
             {/* Summary Cards */}
             <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14, marginBottom: 16 }}>
               {[
@@ -706,8 +715,6 @@ export default function StitchingPage() {
                 </div>
               )}
             </div>
-          </div>
-
         </div>
 
       </div>

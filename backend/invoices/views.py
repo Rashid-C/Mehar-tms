@@ -405,15 +405,18 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
 
         if tailor:
             queryset = queryset.filter(Q(tailor__code=tailor) | Q(work_lines__tailor__code=tailor))
-        if date_from:
-            queryset = queryset.filter(work_lines__date__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(work_lines__date__lte=date_to)
-        if not date_from and not date_to:
-            if date:
-                queryset = queryset.filter(work_lines__date=date)
-            elif month:
-                queryset = queryset.filter(work_lines__date__month=month)
+        if date_from and date_to:
+            queryset = queryset.filter(
+                Q(work_lines__date__gte=date_from, work_lines__date__lte=date_to) | Q(work_lines__isnull=True)
+            )
+        elif date_from:
+            queryset = queryset.filter(Q(work_lines__date__gte=date_from) | Q(work_lines__isnull=True))
+        elif date_to:
+            queryset = queryset.filter(Q(work_lines__date__lte=date_to) | Q(work_lines__isnull=True))
+        elif date:
+            queryset = queryset.filter(Q(work_lines__date=date) | Q(work_lines__isnull=True))
+        elif month:
+            queryset = queryset.filter(Q(work_lines__date__month=month) | Q(work_lines__isnull=True))
         if material:
             queryset = queryset.filter(materials__name__icontains=material)
         if ref_no:
