@@ -67,6 +67,7 @@ export default function FinishedGoodsPage() {
   const [manufactureOpen, setManufactureOpen] = useState(false)
   const [manuRefNo, setManuRefNo] = useState('')
   const [manuMdNo, setManuMdNo] = useState('')
+  const [manuQty, setManuQty] = useState('1')
   const [manuTailor, setManuTailor] = useState('')
   const [manuRemarks, setManuRemarks] = useState('')
   const [manuMaterials, setManuMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
@@ -142,7 +143,7 @@ export default function FinishedGoodsPage() {
 
   const openManufacture = () => {
     setManuError('')
-    setManuMdNo(''); setManuTailor(''); setManuRemarks('')
+    setManuMdNo(''); setManuQty('1'); setManuTailor(''); setManuRemarks('')
     setManuMaterials([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
     setManuWorkLines([{ tailor: '', work_type: 'Stitching', rate: '', date: today(), remarks: '' }])
     getNextStitchingRefNo().then(r => setManuRefNo(r.data.next_ref_no))
@@ -172,7 +173,7 @@ export default function FinishedGoodsPage() {
     setManuSaving(true)
     try {
       const created = await createStitchingReference({
-        ref_no: manuRefNo, md_no: manuMdNo, inv_no: '', tailor: parseInt(referenceTailor), remarks: manuRemarks,
+        ref_no: manuRefNo, md_no: manuMdNo, inv_no: '', qty: parseInt(manuQty) || 1, tailor: parseInt(referenceTailor), remarks: manuRemarks,
         materials: manuMaterials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0, remarks: m.remarks })),
         work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date, remarks: w.remarks })),
       })
@@ -225,10 +226,14 @@ export default function FinishedGoodsPage() {
             <div style={{ padding: 16 }}>
               {manuError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{manuError}</div>}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" style={{ marginBottom: 16 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ marginBottom: 16 }}>
                 <div>
                   <label style={lbl}>Model Number</label>
                   <input className="field" value={manuMdNo} onChange={e => setManuMdNo(e.target.value)} placeholder="Editable model no…" />
+                </div>
+                <div>
+                  <label style={lbl}>Qty</label>
+                  <input type="number" min="1" step="1" className="field" value={manuQty} onChange={e => setManuQty(e.target.value)} placeholder="1" />
                 </div>
                 <div>
                   <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION — required if no work added</label>

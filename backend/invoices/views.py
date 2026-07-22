@@ -509,7 +509,7 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
         finished = FinishedGood.objects.create(
             reference=reference,
             item_name=reference.md_no or reference.ref_no,
-            qty=1,
+            qty=reference.qty,
             cost_price=cost_price,
             selling_price=0,
             date=timezone.now().date(),

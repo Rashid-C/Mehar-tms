@@ -69,6 +69,7 @@ export default function StitchingPage() {
   const [refNo, setRefNo] = useState('')
   const [mdNo, setMdNo] = useState('')
   const [invNo, setInvNo] = useState('')
+  const [refQty, setRefQty] = useState('1')
   const [allocationTailor, setAllocationTailor] = useState('')
   const [remarks, setRemarks] = useState('')
   const [materials, setMaterials] = useState<MaterialRow[]>([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
@@ -131,7 +132,7 @@ export default function StitchingPage() {
   // ── Entry form helpers ──────────────────────────────────────────────────
   const resetForm = () => {
     setCreateError('')
-    setMdNo(''); setInvNo(''); setAllocationTailor(''); setRemarks('')
+    setMdNo(''); setInvNo(''); setRefQty('1'); setAllocationTailor(''); setRemarks('')
     setMaterials([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
     setWorkLines([{ tailor: '', rate: '', date: today(), work_type: 'Stitching', remarks: '' }])
     getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
@@ -162,7 +163,7 @@ export default function StitchingPage() {
     setSaving(true)
     try {
       await createStitchingReference({
-        ref_no: refNo, md_no: mdNo, inv_no: invNo, tailor: parseInt(referenceTailor), remarks,
+        ref_no: refNo, md_no: mdNo, inv_no: invNo, qty: parseInt(refQty) || 1, tailor: parseInt(referenceTailor), remarks,
         materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0, remarks: m.remarks })),
         work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date, remarks: w.remarks })),
       })
@@ -333,7 +334,7 @@ export default function StitchingPage() {
             <div style={{ padding: 16 }}>
               {createError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{createError}</div>}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ marginBottom: 16 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3" style={{ marginBottom: 16 }}>
                 <div>
                   <label style={lbl}>Model Number</label>
                   <input className="field" value={mdNo} onChange={e => setMdNo(e.target.value)} placeholder="Editable model no…" />
@@ -341,6 +342,10 @@ export default function StitchingPage() {
                 <div>
                   <label style={lbl}>Inv No</label>
                   <input className="field" value={invNo} onChange={e => setInvNo(e.target.value)} placeholder="Optional" />
+                </div>
+                <div>
+                  <label style={lbl}>Qty</label>
+                  <input type="number" min="1" step="1" className="field" value={refQty} onChange={e => setRefQty(e.target.value)} placeholder="1" />
                 </div>
                 <div>
                   <label style={{ ...lbl, fontWeight: 700, color: '#1e293b' }}>ALLOCATION — required if no work added</label>
@@ -499,6 +504,7 @@ export default function StitchingPage() {
                       <tr>
                         <th>Ref No</th>
                         <th>MD No</th>
+                        <th>Qty</th>
                         <th style={{ fontWeight: 800 }}>ALLOCATION</th>
                         <th>No MTR</th>
                         <th>Mat TTL</th>
@@ -518,6 +524,7 @@ export default function StitchingPage() {
                               {r.ref_no}
                             </td>
                             <td style={{ fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>{r.md_no || '—'}</td>
+                            <td style={{ fontWeight: 600 }}>{r.qty}</td>
                             <td><span className="badge badge-blue">{r.tailor_code}</span> <span style={{ color: '#64748b', fontSize: 12 }}>{r.tailor_name}</span></td>
                             <td style={{ color: '#374151' }}>
                               {r.materials.length === 0 ? <span style={{ color: '#9ca3af' }}>—</span> : r.materials.length}
@@ -543,7 +550,7 @@ export default function StitchingPage() {
                           </tr>
                           {expandedId === r.id && (
                             <tr className="no-print">
-                              <td colSpan={10} style={{ padding: 0, background: '#f8fafc' }}>
+                              <td colSpan={11} style={{ padding: 0, background: '#f8fafc' }}>
                                 <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
 
                                   {/* Materials management */}

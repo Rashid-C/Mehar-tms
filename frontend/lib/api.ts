@@ -149,6 +149,7 @@ export interface StitchingReference {
   tailor_code: string
   tailor_name: string
   inv_no: string
+  qty: number
   remarks: string
   is_finished: boolean
   created_at: string

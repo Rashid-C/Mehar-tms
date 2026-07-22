@@ -64,6 +64,7 @@ class StitchingReference(models.Model):
     md_no = models.CharField(max_length=20, blank=True)
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitching_references')  # Allocation Cut
     inv_no = models.CharField(max_length=20, blank=True)
+    qty = models.PositiveIntegerField(default=1)
     remarks = models.TextField(blank=True)
     is_finished = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

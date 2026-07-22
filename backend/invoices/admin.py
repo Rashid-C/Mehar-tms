@@ -54,7 +54,7 @@ class StitchingWorkLineInline(admin.TabularInline):
 
 @admin.register(StitchingReference)
 class StitchingReferenceAdmin(admin.ModelAdmin):
-    list_display = ['ref_no', 'md_no', 'tailor', 'inv_no', 'is_finished', 'created_at']
+    list_display = ['ref_no', 'md_no', 'tailor', 'qty', 'inv_no', 'is_finished', 'created_at']
     search_fields = ['ref_no', 'md_no', 'inv_no', 'tailor__code']
     list_filter = ['tailor', 'is_finished']
     inlines = [AllocationMaterialInline, StitchingWorkLineInline]
