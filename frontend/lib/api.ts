@@ -127,6 +127,7 @@ export interface AllocationMaterial {
   qty: number
   price: number
   remarks: string
+  verified: boolean
 }
 
 export interface StitchingWorkLine {
@@ -139,6 +140,7 @@ export interface StitchingWorkLine {
   rate: number
   date: string
   remarks: string
+  verified: boolean
 }
 
 export interface StitchingReference {

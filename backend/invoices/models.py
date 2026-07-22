@@ -82,6 +82,7 @@ class AllocationMaterial(models.Model):
     qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     remarks = models.TextField(blank=True)
+    verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.reference.ref_no} | {self.name} | {self.qty}"
@@ -97,6 +98,7 @@ class StitchingWorkLine(models.Model):
     rate = models.DecimalField(max_digits=10, decimal_places=2)
     date = models.DateField()
     remarks = models.TextField(blank=True)
+    verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.reference.ref_no} | {self.tailor.code} | {self.rate}"

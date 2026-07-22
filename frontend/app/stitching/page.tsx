@@ -266,6 +266,46 @@ export default function StitchingPage() {
     } catch { fail('Failed to delete') }
   }
 
+  const handleVerifyMaterial = async (m: AllocationMaterial, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await updateStitchingMaterial(m.id, { reference: m.reference, name: m.name, qty: m.qty, price: m.price, remarks: m.remarks, verified: true })
+      notify('Verified')
+      await fetchData()
+    } catch { fail('Failed to verify') }
+  }
+
+  const handleVerifyWork = async (w: StitchingWorkLine, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await updateStitchingWorkLine(w.id, { reference: w.reference, tailor: w.tailor, work_type: w.work_type, rate: w.rate, date: w.date, remarks: w.remarks, verified: true })
+      notify('Verified')
+      await fetchData()
+    } catch { fail('Failed to verify') }
+  }
+
+  const handleVerifyAllMaterials = async (r: StitchingReference, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await Promise.all(r.materials.map(m =>
+        updateStitchingMaterial(m.id, { reference: m.reference, name: m.name, qty: m.qty, price: m.price, remarks: m.remarks, verified: true })
+      ))
+      notify('All materials verified')
+      await fetchData()
+    } catch { fail('Failed to verify') }
+  }
+
+  const handleVerifyAllWork = async (r: StitchingReference, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await Promise.all(r.work_lines.map(w =>
+        updateStitchingWorkLine(w.id, { reference: w.reference, tailor: w.tailor, work_type: w.work_type, rate: w.rate, date: w.date, remarks: w.remarks, verified: true })
+      ))
+      notify('All work lines verified')
+      await fetchData()
+    } catch { fail('Failed to verify') }
+  }
+
   // ── Register (right pane) search + totals ───────────────────────────────
   const itemNames = Array.from(new Set(productionItems.map(it => it.name))).sort()
   const totalAmt = records.reduce((s, r) => s + r.materials_total + r.work_total, 0)
@@ -512,6 +552,7 @@ export default function StitchingPage() {
                         <th>WRK TTL</th>
                         <th>Inv No</th>
                         <th>Remarks</th>
+                        <th>M-cost</th>
                         <th className="no-print"></th>
                       </tr>
                     </thead>
@@ -541,6 +582,7 @@ export default function StitchingPage() {
                             <td style={{ color: '#16a34a', fontWeight: 600 }}>AED {r.work_total.toFixed(2)}</td>
                             <td style={{ color: '#6b7280', fontFamily: 'monospace' }}>{r.inv_no || '—'}</td>
                             <td style={{ color: '#9ca3af' }}>{r.remarks || '—'}</td>
+                            <td style={{ color: '#1e293b', fontWeight: 700 }}>AED {(r.materials_total + r.work_total).toFixed(2)}</td>
                             <td className="no-print">
                               <div style={{ display: 'flex', gap: 6 }}>
                                 <button onClick={e => handleFinish(r.id, e)} className="btn-gold" style={{ background: '#0ea5e9', padding: '4px 10px', fontSize: 12 }}>Finish</button>
@@ -550,7 +592,7 @@ export default function StitchingPage() {
                           </tr>
                           {expandedId === r.id && (
                             <tr className="no-print">
-                              <td colSpan={11} style={{ padding: 0, background: '#f8fafc' }}>
+                              <td colSpan={12} style={{ padding: 0, background: '#f8fafc' }}>
                                 <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
 
                                   {/* Materials management */}
@@ -594,18 +636,24 @@ export default function StitchingPage() {
                                             <th>Qty</th>
                                             <th>Price</th>
                                             <th>Remarks</th>
-                                            <th></th>
+                                            <th>
+                                              <button onClick={e => handleVerifyAllMaterials(r, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11, color: '#16a34a', textTransform: 'none', letterSpacing: 0 }}>Verify All</button>
+                                            </th>
                                           </tr>
                                         </thead>
                                         <tbody>
                                           {getFilteredMaterials(r).map(m => (
                                             <tr key={m.id} style={{ background: editMatId === m.id ? '#f5f3ff' : undefined }}>
-                                              <td style={{ fontWeight: 600, fontSize: 12 }}>{m.name}</td>
+                                              <td style={{ fontWeight: 600, fontSize: 12 }}>
+                                                {m.name}
+                                                {m.verified && <span className="badge badge-green" style={{ marginLeft: 6, fontSize: 10 }}>✓ Verified</span>}
+                                              </td>
                                               <td style={{ fontSize: 12 }}>{m.qty}</td>
                                               <td style={{ fontSize: 12 }}>{m.price}</td>
                                               <td style={{ fontSize: 12, color: '#9ca3af' }}>{m.remarks || '—'}</td>
                                               <td>
                                                 <div style={{ display: 'flex', gap: 4 }}>
+                                                  <button onClick={e => handleVerifyMaterial(m, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11, color: '#16a34a' }}>Verify</button>
                                                   <button onClick={e => handleEditMaterial(m, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
                                                   <button onClick={e => handleDeleteMaterial(m.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button>
                                                 </div>
@@ -668,7 +716,9 @@ export default function StitchingPage() {
                                             <th>Work Type</th>
                                             <th>Remarks</th>
                                             <th>Rate</th>
-                                            <th></th>
+                                            <th>
+                                              <button onClick={e => handleVerifyAllWork(r, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11, color: '#16a34a', textTransform: 'none', letterSpacing: 0 }}>Verify All</button>
+                                            </th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -676,11 +726,15 @@ export default function StitchingPage() {
                                             <tr key={w.id} style={{ background: editWorkId === w.id ? '#f0fdf4' : undefined }}>
                                               <td style={{ fontSize: 12, color: '#6b7280' }}>{w.date}</td>
                                               <td><span className="badge badge-blue" style={{ fontSize: 11 }}>{w.tailor_code}</span></td>
-                                              <td style={{ fontSize: 12, color: '#374151' }}>{w.work_type || '—'}</td>
+                                              <td style={{ fontSize: 12, color: '#374151' }}>
+                                                {w.work_type || '—'}
+                                                {w.verified && <span className="badge badge-green" style={{ marginLeft: 6, fontSize: 10 }}>✓ Verified</span>}
+                                              </td>
                                               <td style={{ fontSize: 12, color: '#9ca3af' }}>{w.remarks || '—'}</td>
                                               <td style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>AED {w.rate}</td>
                                               <td>
                                                 <div style={{ display: 'flex', gap: 4 }}>
+                                                  <button onClick={e => handleVerifyWork(w, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11, color: '#16a34a' }}>Verify</button>
                                                   <button onClick={e => handleEditWork(w, e)} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Edit</button>
                                                   <button onClick={e => handleDeleteWork(w.id, e)} className="btn-danger" style={{ padding: '2px 8px', fontSize: 11 }}>Del</button>
                                                 </div>

@@ -67,11 +67,11 @@ class FinishedGoodAdmin(admin.ModelAdmin):
 
 @admin.register(AllocationMaterial)
 class AllocationMaterialAdmin(admin.ModelAdmin):
-    list_display = ['reference', 'name', 'qty', 'price', 'remarks']
+    list_display = ['reference', 'name', 'qty', 'price', 'remarks', 'verified']
     search_fields = ['reference__ref_no', 'name']
 
 @admin.register(StitchingWorkLine)
 class StitchingWorkLineAdmin(admin.ModelAdmin):
-    list_display = ['reference', 'tailor', 'work_type', 'rate', 'date', 'remarks']
+    list_display = ['reference', 'tailor', 'work_type', 'rate', 'date', 'remarks', 'verified']
     search_fields = ['reference__ref_no', 'tailor__code', 'work_type']
     list_filter = ['tailor', 'work_type', 'date']
