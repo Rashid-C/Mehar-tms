@@ -65,6 +65,7 @@ export default function FinishedGoodsPage() {
 
   // ── Manufacture modal (create + finish a new reference directly here) ──
   const [manufactureOpen, setManufactureOpen] = useState(false)
+  const [bulkMode, setBulkMode] = useState(false)
   const [manuRefNo, setManuRefNo] = useState('')
   const [manuMdNo, setManuMdNo] = useState('')
   const [manuQty, setManuQty] = useState('1')
@@ -141,12 +142,13 @@ export default function FinishedGoodsPage() {
     catch { fail('Failed to delete') }
   }
 
-  const openManufacture = () => {
+  const openManufacture = (bulk: boolean = false) => {
     setManuError('')
     setManuMdNo(''); setManuQty('1'); setManuTailor(''); setManuRemarks('')
     setManuMaterials([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
     setManuWorkLines([{ tailor: '', work_type: 'Stitching', rate: '', date: today(), remarks: '' }])
     getNextStitchingRefNo().then(r => setManuRefNo(r.data.next_ref_no))
+    setBulkMode(bulk)
     setManufactureOpen(true)
   }
   const closeManufacture = () => setManufactureOpen(false)
@@ -170,15 +172,25 @@ export default function FinishedGoodsPage() {
       return
     }
     const referenceTailor = manuTailor || validWork[0].tailor
+    const bulkQtyNum = parseInt(manuQty) || 1
     setManuSaving(true)
     try {
       const created = await createStitchingReference({
-        ref_no: manuRefNo, md_no: manuMdNo, inv_no: '', qty: parseInt(manuQty) || 1, tailor: parseInt(referenceTailor), remarks: manuRemarks,
-        materials: manuMaterials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0, remarks: m.remarks })),
-        work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date, remarks: w.remarks })),
+        ref_no: manuRefNo, md_no: manuMdNo, inv_no: '', qty: bulkQtyNum, tailor: parseInt(referenceTailor), remarks: manuRemarks,
+        materials: manuMaterials.filter(m => m.name).map(m => ({
+          name: m.name,
+          qty: (parseFloat(m.qty) || 0) * (bulkMode ? bulkQtyNum : 1),
+          price: parseFloat(m.price) || 0,
+          remarks: m.remarks,
+        })),
+        work_lines: validWork.map(w => ({
+          tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching',
+          rate: (parseFloat(w.rate) || 0) * (bulkMode ? bulkQtyNum : 1),
+          date: w.date, remarks: w.remarks,
+        })),
       })
       await finishStitchingReference(created.data.id)
-      notify(`Reference ${manuRefNo} manufactured`)
+      notify(bulkMode ? `Reference ${manuRefNo} manufactured (×${bulkQtyNum})` : `Reference ${manuRefNo} manufactured`)
       setManufactureOpen(false)
       await fetchData()
     } catch (err: unknown) {
@@ -202,8 +214,8 @@ export default function FinishedGoodsPage() {
             <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>Stitching references that have been marked as finished and moved out of production</p>
           </div>
           <div className="flex flex-col sm:flex-row" style={{ gap: 8 }}>
-            <button className="btn-gold w-full sm:w-auto" style={{ background: '#0ea5e9' }}>BULK MANUFACTURE</button>
-            <button onClick={manufactureOpen ? closeManufacture : openManufacture} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>
+            <button onClick={() => openManufacture(true)} className="btn-gold w-full sm:w-auto" style={{ background: '#0ea5e9' }}>BULK MANUFACTURE</button>
+            <button onClick={manufactureOpen ? closeManufacture : () => openManufacture(false)} className="btn-gold w-full sm:w-auto" style={{ background: '#7c3aed' }}>
               {manufactureOpen ? '× Cancel' : '+ Manufacture'}
             </button>
           </div>
@@ -217,14 +229,19 @@ export default function FinishedGoodsPage() {
           <div onClick={closeManufacture}
             style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
           <div onClick={e => e.stopPropagation()} className="card" style={{ width: '100%', maxWidth: 960, maxHeight: '92vh', overflowY: 'auto' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>Production Entry</span>
-              <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: '#7c3aed', background: '#ffffff', border: '1px solid #ddd6fe', borderRadius: 4, padding: '3px 10px' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #e8ecf0', background: bulkMode ? '#eff6ff' : '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: bulkMode ? '#0ea5e9' : '#7c3aed' }}>{bulkMode ? 'Bulk Manufacture' : 'Production Entry'}</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: bulkMode ? '#0ea5e9' : '#7c3aed', background: '#ffffff', border: `1px solid ${bulkMode ? '#bae6fd' : '#ddd6fe'}`, borderRadius: 4, padding: '3px 10px' }}>
                 {manuRefNo || '…'}
               </span>
             </div>
             <div style={{ padding: 16 }}>
               {manuError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{manuError}</div>}
+              {bulkMode && (
+                <div style={{ background: '#eff6ff', border: '1px solid #bae6fd', color: '#0369a1', borderRadius: 6, padding: '10px 14px', fontSize: 12, marginBottom: 16 }}>
+                  Enter Materials Qty and Work Rate <strong>per unit</strong> below — they&apos;ll be multiplied by Bulk Qty automatically when saved.
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ marginBottom: 16 }}>
                 <div>
@@ -232,7 +249,7 @@ export default function FinishedGoodsPage() {
                   <input className="field" value={manuMdNo} onChange={e => setManuMdNo(e.target.value)} placeholder="Editable model no…" />
                 </div>
                 <div>
-                  <label style={lbl}>Qty</label>
+                  <label style={{ ...lbl, fontWeight: bulkMode ? 700 : 500, color: bulkMode ? '#0ea5e9' : '#374151' }}>{bulkMode ? 'Bulk Qty (units)' : 'Qty'}</label>
                   <input type="number" min="1" step="1" className="field" value={manuQty} onChange={e => setManuQty(e.target.value)} placeholder="1" />
                 </div>
                 <div>
@@ -245,8 +262,12 @@ export default function FinishedGoodsPage() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 16 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>Total (Materials + Work)</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>AED {(manuMaterialsTotal + manuWorkTotal).toFixed(2)}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>
+                  Total (Materials + Work){bulkMode && ` × ${parseInt(manuQty) || 1} units`}
+                </span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>
+                  AED {((manuMaterialsTotal + manuWorkTotal) * (bulkMode ? (parseInt(manuQty) || 1) : 1)).toFixed(2)}
+                </span>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -332,7 +353,7 @@ export default function FinishedGoodsPage() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <button onClick={openManufacture} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>Clear</button>
+                <button onClick={() => openManufacture(bulkMode)} type="button" className="btn-ghost" style={{ fontWeight: 700 }}>Clear</button>
                 <button onClick={handleManufacture} disabled={manuSaving} className="btn-gold" style={{ background: '#16a34a' }}>
                   {manuSaving ? 'Saving…' : 'Save'}
                 </button>
