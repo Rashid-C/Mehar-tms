@@ -6,12 +6,14 @@ import ShopTab from './components/ShopTab'
 import OrderTab from './components/OrderTab'
 import PaymentTab from './components/PaymentTab'
 import MatTab from './components/MatTab'
+import StitchingContent from '../stitching/StitchingContent'
 
 const jobs = [
-  { id: 'shop'    as JobType, label: 'Shop',      color: '#2563eb' },
-  { id: 'order'   as JobType, label: 'Order',     color: '#0891b2' },
-  { id: 'payment' as JobType, label: 'Payment',   color: '#16a34a' },
-  { id: 'mat'     as JobType, label: 'Mat Issue', color: '#d97706' },
+  { id: 'shop'      as JobType, label: 'Shop',      color: '#2563eb' },
+  { id: 'order'     as JobType, label: 'Order',     color: '#0891b2' },
+  { id: 'payment'   as JobType, label: 'Payment',   color: '#16a34a' },
+  { id: 'mat'       as JobType, label: 'Mat Issue', color: '#d97706' },
+  { id: 'stitching' as JobType, label: 'Stitching', color: '#7c3aed' },
 ]
 
 export default function JobInvoicePage() {
@@ -84,6 +86,9 @@ export default function JobInvoicePage() {
         )}
         {activeJob === 'mat' && (
           <MatTab tailors={tailors} onTailorCreated={onTailorCreated} notify={notify} fail={fail} />
+        )}
+        {activeJob === 'stitching' && (
+          <StitchingContent />
         )}
 
       </div>

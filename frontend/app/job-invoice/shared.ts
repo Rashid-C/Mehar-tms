@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 
-export type JobType = 'shop' | 'order' | 'payment' | 'mat'
+export type JobType = 'shop' | 'order' | 'payment' | 'mat' | 'stitching'
 
 export const today = () => new Date().toISOString().slice(0, 10)
 export const MODEL_NO_RE = /^[A-Z0-9]{1,7}$/
