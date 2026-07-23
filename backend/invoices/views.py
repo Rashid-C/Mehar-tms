@@ -475,6 +475,23 @@ class StitchingReferenceViewSet(viewsets.ModelViewSet):
         return Response({'next_ref_no': f"ST{max_num + 1:03d}"})
 
     @action(detail=False, methods=['get'])
+    def lookup_by_md_no(self, request):
+        md_no = (request.query_params.get('md_no') or '').strip()
+        if not md_no:
+            return Response({'detail': 'md_no is required'}, status=400)
+        reference = (
+            StitchingReference.objects
+            .select_related('tailor')
+            .prefetch_related('materials', 'work_lines__tailor')
+            .filter(md_no__iexact=md_no)
+            .order_by('-created_at')
+            .first()
+        )
+        if not reference:
+            return Response({'detail': 'No previous reference found for this model number.'}, status=404)
+        return Response(self.get_serializer(reference).data)
+
+    @action(detail=False, methods=['get'])
     def summary(self, request):
         references = self.get_queryset()
         work_lines = StitchingWorkLine.objects.filter(reference__in=references)

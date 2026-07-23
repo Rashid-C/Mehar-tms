@@ -2,7 +2,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  getStitchingReferences, createStitchingReference, deleteStitchingReference,
+  getStitchingReferences, createStitchingReference, updateStitchingReference, deleteStitchingReference,
   createStitchingMaterial, updateStitchingMaterial, deleteStitchingMaterial,
   createStitchingWorkLine, updateStitchingWorkLine, deleteStitchingWorkLine,
   getNextStitchingRefNo, getStitchingSummary, getTailors, getItems, finishStitchingReference,
@@ -67,6 +67,7 @@ export default function StitchingContent() {
   // ── Entry form (opens on demand) ────────────────────────────────────────
   const [showCreate, setShowCreate] = useState(false)
   const [refNo, setRefNo] = useState('')
+  const [refDate, setRefDate] = useState(today())
   const [mdNo, setMdNo] = useState('')
   const [invNo, setInvNo] = useState('')
   const [refQty, setRefQty] = useState('1')
@@ -94,6 +95,8 @@ export default function StitchingContent() {
   const [savingWork, setSavingWork] = useState(false)
   const [matSearch, setMatSearch] = useState('')
   const [workSearch, setWorkSearch] = useState('')
+  const [refMdNoDraft, setRefMdNoDraft] = useState('')
+  const [savingRefMdNo, setSavingRefMdNo] = useState(false)
 
   const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3000) }
   const fail = (msg: string) => { setError(msg); setSuccess('') }
@@ -132,7 +135,7 @@ export default function StitchingContent() {
   // ── Entry form helpers ──────────────────────────────────────────────────
   const resetForm = () => {
     setCreateError('')
-    setMdNo(''); setInvNo(''); setRefQty('1'); setAllocationTailor(''); setRemarks('')
+    setMdNo(''); setInvNo(''); setRefQty('1'); setRefDate(today()); setAllocationTailor(''); setRemarks('')
     setMaterials([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
     setWorkLines([{ tailor: '', rate: '', date: today(), work_type: 'Stitching', remarks: '' }])
     getNextStitchingRefNo().then(r => setRefNo(r.data.next_ref_no))
@@ -163,7 +166,7 @@ export default function StitchingContent() {
     setSaving(true)
     try {
       await createStitchingReference({
-        ref_no: refNo, md_no: mdNo, inv_no: invNo, qty: parseInt(refQty) || 1, tailor: parseInt(referenceTailor), remarks,
+        ref_no: refNo, date: refDate, md_no: mdNo, inv_no: invNo, qty: parseInt(refQty) || 1, tailor: parseInt(referenceTailor), remarks,
         materials: materials.filter(m => m.name).map(m => ({ name: m.name, qty: parseFloat(m.qty) || 0, price: parseFloat(m.price) || 0, remarks: m.remarks })),
         work_lines: validWork.map(w => ({ tailor: parseInt(w.tailor), work_type: w.work_type || 'Stitching', rate: parseFloat(w.rate), date: w.date, remarks: w.remarks })),
       })
@@ -183,6 +186,19 @@ export default function StitchingContent() {
     setMatName(''); setMatQty(''); setMatPrice(''); setMatPriceIsUnit(false); setMatRemarks(''); setEditMatId(null)
     setWorkTailor(''); setWorkType('Stitching'); setWorkRate(''); setWorkDate(today()); setWorkRemarks(''); setEditWorkId(null)
     setMatSearch(''); setWorkSearch('')
+    setRefMdNoDraft(r.md_no || '')
+  }
+
+  const handleSaveRefMdNo = async (r: StitchingReference, e: React.FormEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    setSavingRefMdNo(true)
+    try {
+      await updateStitchingReference(r.id, {
+        ref_no: r.ref_no, date: r.date, md_no: refMdNoDraft, inv_no: r.inv_no, qty: r.qty, tailor: r.tailor, remarks: r.remarks,
+      })
+      notify('Model number updated')
+      await fetchData()
+    } catch { fail('Failed to update model number') } finally { setSavingRefMdNo(false) }
   }
 
   const handleDeleteRef = async (id: number, e: React.MouseEvent) => {
@@ -374,7 +390,11 @@ export default function StitchingContent() {
             <div style={{ padding: 16 }}>
               {createError && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '10px 14px', fontSize: 13, marginBottom: 16 }}>{createError}</div>}
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3" style={{ marginBottom: 16 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3" style={{ marginBottom: 16 }}>
+                <div>
+                  <label style={lbl}>Date</label>
+                  <input type="date" className="field" value={refDate} onChange={e => setRefDate(e.target.value)} />
+                </div>
                 <div>
                   <label style={lbl}>Model Number</label>
                   <input className="field" value={mdNo} onChange={e => setMdNo(e.target.value)} placeholder="Editable model no…" />
@@ -438,16 +458,16 @@ export default function StitchingContent() {
                 </div>
 
                 <div>
-                  {/* Work Type */}
+                  {/* Worker Type */}
                   <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
+                    <label style={{ ...lbl, marginBottom: 0 }}>Worker Type</label>
                     <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {workTotal.toFixed(2)}</strong></span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                     {workLines.map((w, i) => (
                       <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Work {i + 1}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Worker Type {i + 1}</span>
                           <button type="button" onClick={() => removeWork(i)} disabled={workLines.length === 1}
                             className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: workLines.length === 1 ? 0.3 : 1 }}>×</button>
                         </div>
@@ -469,7 +489,7 @@ export default function StitchingContent() {
                       </div>
                     ))}
                     <button type="button" onClick={addWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                      + Add Work {workLines.length + 1}
+                      + Add Worker Type {workLines.length + 1}
                     </button>
                   </div>
                 </div>
@@ -593,7 +613,20 @@ export default function StitchingContent() {
                           {expandedId === r.id && (
                             <tr className="no-print">
                               <td colSpan={12} style={{ padding: 0, background: '#f8fafc' }}>
-                                <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
+                                <div style={{ padding: '20px 20px 0' }} onClick={e => e.stopPropagation()}>
+                                  <form onSubmit={e => handleSaveRefMdNo(r, e)} className="card"
+                                    style={{ display: 'flex', alignItems: 'end', gap: 8, padding: 12, marginBottom: 20 }}>
+                                    <div style={{ flex: 1, maxWidth: 260 }}>
+                                      <label style={lbl}>Model Number</label>
+                                      <input className="field" value={refMdNoDraft} onChange={e => setRefMdNoDraft(e.target.value)} placeholder="Add / update model number…" />
+                                    </div>
+                                    <button type="submit" disabled={savingRefMdNo || refMdNoDraft === (r.md_no || '')}
+                                      className="btn-gold" style={{ background: '#2563eb', padding: '8px 16px', fontSize: 12 }}>
+                                      {savingRefMdNo ? 'Saving…' : 'Save'}
+                                    </button>
+                                  </form>
+                                </div>
+                                <div style={{ padding: '0 20px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} onClick={e => e.stopPropagation()}>
 
                                   {/* Materials management */}
                                   <div className="card" style={{ overflow: 'hidden' }}>
@@ -678,7 +711,7 @@ export default function StitchingContent() {
                                   {/* Work lines management */}
                                   <div className="card" style={{ overflow: 'hidden' }}>
                                     <div style={{ padding: '10px 14px', borderBottom: '1px solid #e8ecf0', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Work Type — add more tailors</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>Worker Type — add more tailors</span>
                                       {editWorkId && expandedId === r.id && (
                                         <button onClick={cancelEditWork} className="btn-ghost" style={{ padding: '2px 8px', fontSize: 11 }}>Cancel edit</button>
                                       )}

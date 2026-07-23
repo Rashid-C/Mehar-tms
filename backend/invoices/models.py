@@ -1,6 +1,7 @@
 import re
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 def validate_model_no(value):
@@ -61,6 +62,7 @@ class RateSheet(models.Model):
 
 class StitchingReference(models.Model):
     ref_no = models.CharField(max_length=20, unique=True)
+    date = models.DateField(default=timezone.now)
     md_no = models.CharField(max_length=20, blank=True)
     tailor = models.ForeignKey(Tailor, on_delete=models.PROTECT, related_name='stitching_references')  # Allocation Cut
     inv_no = models.CharField(max_length=20, blank=True)

@@ -146,6 +146,7 @@ export interface StitchingWorkLine {
 export interface StitchingReference {
   id: number
   ref_no: string
+  date: string
   md_no: string
   tailor: number
   tailor_code: string
@@ -183,6 +184,8 @@ export const createStitchingReference = (data: object) => api.post<StitchingRefe
 export const updateStitchingReference = (id: number, data: object) => api.put<StitchingReference>(`/stitching-references/${id}/`, data)
 export const deleteStitchingReference = (id: number) => api.delete(`/stitching-references/${id}/`)
 export const getNextStitchingRefNo = () => api.get<{ next_ref_no: string }>('/stitching-references/next_ref_no/')
+export const lookupStitchingReferenceByMdNo = (md_no: string) =>
+  api.get<StitchingReference>('/stitching-references/lookup_by_md_no/', { params: { md_no } })
 export const getStitchingSummary = (params?: object) => api.get<{
   total_amount: number
   total_records: number

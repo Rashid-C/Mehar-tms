@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import {
   getFinishedGoods, updateFinishedGood, deleteFinishedGood, getTailors, getItems,
-  createStitchingReference, getNextStitchingRefNo, finishStitchingReference,
+  createStitchingReference, getNextStitchingRefNo, finishStitchingReference, lookupStitchingReferenceByMdNo,
   FinishedGood, Tailor, Item,
 } from '@/lib/api'
 
@@ -67,6 +67,7 @@ export default function FinishedGoodsPage() {
   const [manufactureOpen, setManufactureOpen] = useState(false)
   const [bulkMode, setBulkMode] = useState(false)
   const [manuRefNo, setManuRefNo] = useState('')
+  const [manuDate, setManuDate] = useState(today())
   const [manuMdNo, setManuMdNo] = useState('')
   const [manuQty, setManuQty] = useState('1')
   const [manuTailor, setManuTailor] = useState('')
@@ -75,6 +76,8 @@ export default function FinishedGoodsPage() {
   const [manuWorkLines, setManuWorkLines] = useState<WorkRow[]>([{ tailor: '', work_type: 'Stitching', rate: '', date: today(), remarks: '' }])
   const [manuSaving, setManuSaving] = useState(false)
   const [manuError, setManuError] = useState('')
+  const [manuLookupLoading, setManuLookupLoading] = useState(false)
+  const [loadedFromRef, setLoadedFromRef] = useState<string | null>(null)
 
   const notify = (msg: string) => { setSuccess(msg); setError(''); setTimeout(() => setSuccess(''), 3000) }
   const fail = (msg: string) => { setError(msg); setSuccess('') }
@@ -144,17 +147,61 @@ export default function FinishedGoodsPage() {
 
   const openManufacture = (bulk: boolean = false) => {
     setManuError('')
-    setManuMdNo(''); setManuQty('1'); setManuTailor(''); setManuRemarks('')
+    setManuMdNo(''); setManuDate(today()); setManuQty('1'); setManuTailor(''); setManuRemarks('')
     setManuMaterials([{ name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
     setManuWorkLines([{ tailor: '', work_type: 'Stitching', rate: '', date: today(), remarks: '' }])
+    setLoadedFromRef(null)
     getNextStitchingRefNo().then(r => setManuRefNo(r.data.next_ref_no))
     setBulkMode(bulk)
     setManufactureOpen(true)
   }
   const closeManufacture = () => setManufactureOpen(false)
 
+  const handleMdNoLookup = async () => {
+    if (!bulkMode || !manuMdNo.trim()) return
+    setManuLookupLoading(true)
+    try {
+      const res = await lookupStitchingReferenceByMdNo(manuMdNo.trim())
+      const ref = res.data
+      const divisor = ref.qty || 1
+      if (ref.materials.length > 0) {
+        setManuMaterials(ref.materials.map(m => ({
+          name: m.name,
+          qty: String(Number(m.qty) / divisor),
+          price: String(m.price),
+          priceIsUnit: false,
+          remarks: m.remarks || '',
+        })))
+      }
+      if (ref.work_lines.length > 0) {
+        setManuWorkLines(ref.work_lines.map(w => ({
+          tailor: String(w.tailor),
+          work_type: w.work_type || 'Stitching',
+          rate: String(Number(w.rate) / divisor),
+          date: today(),
+          remarks: w.remarks || '',
+        })))
+      }
+      if (!manuTailor) setManuTailor(String(ref.tailor))
+      setLoadedFromRef(ref.ref_no)
+      notify(`Loaded previous configuration for model ${manuMdNo.trim()} (per unit)`)
+    } catch (err: unknown) {
+      const e = err as { response?: { status?: number } }
+      setLoadedFromRef(null)
+      if (e.response?.status !== 404) fail('Failed to look up model number')
+    } finally { setManuLookupLoading(false) }
+  }
+
+  useEffect(() => {
+    if (!manufactureOpen || !bulkMode || !manuMdNo.trim()) return
+    const t = setTimeout(() => { handleMdNoLookup() }, 500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manuMdNo, bulkMode, manufactureOpen])
+
   const manuMaterialsTotal = manuMaterials.reduce((s, m) => s + (parseFloat(m.qty) || 0) * (parseFloat(m.price) || 0), 0)
   const manuWorkTotal = manuWorkLines.reduce((s, w) => s + (parseFloat(w.rate) || 0), 0)
+  const manuBulkQtyNum = parseInt(manuQty) || 1
 
   const updateManuMaterial = (i: number, patch: Partial<MaterialRow>) => setManuMaterials(prev => prev.map((m, idx) => idx === i ? { ...m, ...patch } : m))
   const addManuMaterial = () => setManuMaterials(prev => [...prev, { name: '', qty: '', price: '', priceIsUnit: false, remarks: '' }])
@@ -176,7 +223,7 @@ export default function FinishedGoodsPage() {
     setManuSaving(true)
     try {
       const created = await createStitchingReference({
-        ref_no: manuRefNo, md_no: manuMdNo, inv_no: '', qty: bulkQtyNum, tailor: parseInt(referenceTailor), remarks: manuRemarks,
+        ref_no: manuRefNo, date: manuDate, md_no: manuMdNo, inv_no: '', qty: bulkQtyNum, tailor: parseInt(referenceTailor), remarks: manuRemarks,
         materials: manuMaterials.filter(m => m.name).map(m => ({
           name: m.name,
           qty: (parseFloat(m.qty) || 0) * (bulkMode ? bulkQtyNum : 1),
@@ -243,10 +290,17 @@ export default function FinishedGoodsPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ marginBottom: 16 }}>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3" style={{ marginBottom: 16 }}>
                 <div>
-                  <label style={lbl}>Model Number</label>
-                  <input className="field" value={manuMdNo} onChange={e => setManuMdNo(e.target.value)} placeholder="Editable model no…" />
+                  <label style={lbl}>Date</label>
+                  <input type="date" className="field" value={manuDate} onChange={e => setManuDate(e.target.value)} />
+                </div>
+                <div>
+                  <label style={lbl}>Model Number{bulkMode && manuLookupLoading && <span style={{ color: '#0ea5e9', fontWeight: 400 }}> — looking up…</span>}</label>
+                  <input className="field" value={manuMdNo} onChange={e => { setManuMdNo(e.target.value); setLoadedFromRef(null) }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleMdNoLookup() } }}
+                    onBlur={handleMdNoLookup}
+                    placeholder={bulkMode ? 'Type a previous model to auto-fill…' : 'Editable model no…'} />
                 </div>
                 <div>
                   <label style={{ ...lbl, fontWeight: bulkMode ? 700 : 500, color: bulkMode ? '#0ea5e9' : '#374151' }}>{bulkMode ? 'Bulk Qty (units)' : 'Qty'}</label>
@@ -263,18 +317,28 @@ export default function FinishedGoodsPage() {
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, marginBottom: 16 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>
-                  Total (Materials + Work){bulkMode && ` × ${parseInt(manuQty) || 1} units`}
+                  Total (Materials + Work){bulkMode && ` × ${manuBulkQtyNum} units`}
                 </span>
                 <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>
-                  AED {((manuMaterialsTotal + manuWorkTotal) * (bulkMode ? (parseInt(manuQty) || 1) : 1)).toFixed(2)}
+                  AED {((manuMaterialsTotal + manuWorkTotal) * (bulkMode ? manuBulkQtyNum : 1)).toFixed(2)}
                 </span>
               </div>
+
+              {loadedFromRef && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
+                  <span>✓</span>
+                  <span>Materials &amp; Worker Type below are loaded from {loadedFromRef} (Model {manuMdNo.trim()})</span>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   {/* Materials */}
                   <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <label style={{ ...lbl, marginBottom: 0 }}>Materials</label>
+                    <label style={{ ...lbl, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Materials
+                      {loadedFromRef && <span className="badge badge-green" style={{ fontSize: 10 }}>from {loadedFromRef}</span>}
+                    </label>
                     <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#7c3aed' }}>{manuMaterialsTotal.toFixed(2)}</strong></span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -297,6 +361,18 @@ export default function FinishedGoodsPage() {
                             onChange={e => updateManuMaterial(i, { price: e.target.value })} readOnly={m.priceIsUnit}
                             style={{ background: m.priceIsUnit ? '#f8fafc' : undefined }} placeholder="Price" />
                         </div>
+                        {bulkMode && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                            <div>
+                              <label style={{ fontSize: 10, color: '#0ea5e9', fontWeight: 600, display: 'block', marginBottom: 2 }}>Qty × Bulk ({manuBulkQtyNum})</label>
+                              <input className="field" readOnly value={((parseFloat(m.qty) || 0) * manuBulkQtyNum).toFixed(2)} style={{ background: '#eff6ff', color: '#0ea5e9', fontWeight: 600 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 10, color: '#0ea5e9', fontWeight: 600, display: 'block', marginBottom: 2 }}>Price × Bulk ({manuBulkQtyNum})</label>
+                              <input className="field" readOnly value={((parseFloat(m.price) || 0) * manuBulkQtyNum).toFixed(2)} style={{ background: '#eff6ff', color: '#0ea5e9', fontWeight: 600 }} />
+                            </div>
+                          </div>
+                        )}
                         <input className="field" value={m.remarks} onChange={e => updateManuMaterial(i, { remarks: e.target.value })} placeholder="Remarks…" />
                       </div>
                     ))}
@@ -307,16 +383,19 @@ export default function FinishedGoodsPage() {
                 </div>
 
                 <div>
-                  {/* Work Type */}
+                  {/* Worker Type */}
                   <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <label style={{ ...lbl, marginBottom: 0 }}>Work Type</label>
+                    <label style={{ ...lbl, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Worker Type
+                      {loadedFromRef && <span className="badge badge-green" style={{ fontSize: 10 }}>from {loadedFromRef}</span>}
+                    </label>
                     <span style={{ fontSize: 12, color: '#6b7280' }}>Total: <strong style={{ color: '#16a34a' }}>AED {manuWorkTotal.toFixed(2)}</strong></span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
                     {manuWorkLines.map((w, i) => (
                       <div key={i} style={{ border: '1px solid #eef0f4', borderRadius: 6, padding: 8 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Work {i + 1}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Worker Type {i + 1}</span>
                           <button type="button" onClick={() => removeManuWork(i)} disabled={manuWorkLines.length === 1}
                             className="btn-ghost" style={{ padding: '2px 8px', fontSize: 12, opacity: manuWorkLines.length === 1 ? 0.3 : 1 }}>×</button>
                         </div>
@@ -334,6 +413,12 @@ export default function FinishedGoodsPage() {
                           <input type="number" min="0" step="0.01" className="field" value={w.rate} onChange={e => updateManuWork(i, { rate: e.target.value })} placeholder="Rate" />
                           <input type="date" className="field" value={w.date} onChange={e => updateManuWork(i, { date: e.target.value })} />
                         </div>
+                        {bulkMode && (
+                          <div style={{ marginBottom: 6 }}>
+                            <label style={{ fontSize: 10, color: '#16a34a', fontWeight: 600, display: 'block', marginBottom: 2 }}>Rate × Bulk ({manuBulkQtyNum})</label>
+                            <input className="field" readOnly value={((parseFloat(w.rate) || 0) * manuBulkQtyNum).toFixed(2)} style={{ background: '#f0fdf4', color: '#16a34a', fontWeight: 600 }} />
+                          </div>
+                        )}
                         <input className="field" value={w.remarks} onChange={e => updateManuWork(i, { remarks: e.target.value })} placeholder="Remarks…" />
                       </div>
                     ))}
@@ -341,7 +426,7 @@ export default function FinishedGoodsPage() {
                       {DEFAULT_WORK_TYPES.map(t => <option key={t} value={t} />)}
                     </datalist>
                     <button type="button" onClick={addManuWork} className="btn-ghost" style={{ alignSelf: 'flex-start', padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-                      + Add Work {manuWorkLines.length + 1}
+                      + Add Worker Type {manuWorkLines.length + 1}
                     </button>
                   </div>
                 </div>
